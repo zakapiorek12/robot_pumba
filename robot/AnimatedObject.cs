@@ -9,7 +9,7 @@ namespace robot
 {
     public abstract class AnimatedObject
     {
-        private Mesh[] meshes;
+        protected Mesh[] meshes;
 
         protected AnimatedObject()
         {

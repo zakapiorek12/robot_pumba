@@ -117,7 +117,14 @@ namespace robot
 
         private void CreateScene()
         {
-            Robot robot = new Robot();
+            MeshLoader ml = new MeshLoader();
+            Mesh rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector3(0.8f, 1.0f, 1.0f));
+            AddMeshToDraw(rectangle);
+            rectangle.ModelMatrix = Matrix4.CreateRotationY((float) (Math.PI/2.0f))*
+                                     Matrix4.CreateRotationZ((float) (30.0f* Math.PI / 180.0f)) *
+                                     Matrix4.CreateTranslation(-1.0f, 0.0f, 0.0f);
+
+            Robot robot = new Robot(rectangle);
             robot.AddOnScene();
         }
 
@@ -142,7 +149,7 @@ namespace robot
                 m.BindVAO();
                 BindMeshMaterialDataToShaders(m);
 
-                GL.UniformMatrix4(objectMatrixLocation, false, ref m.ResultMatrix);
+                GL.UniformMatrix4(objectMatrixLocation, false, ref m.ModelMatrix);
                 GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
                 GL.Flush();
             }

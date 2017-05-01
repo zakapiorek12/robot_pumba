@@ -24,7 +24,7 @@ namespace robot
 
     public class Mesh
     {
-        public Matrix4 ResultMatrix;
+        public Matrix4 ModelMatrix = Matrix4.Identity;
 
         public uint[] IndexBuffer { get; set; }
         public Vector3[] VertexBuffer { get; set; }
@@ -46,7 +46,6 @@ namespace robot
             this.NormalizedVertexBuffer = normalized;
             this.IndexBuffer = indices;
             this.Neighbourhood = neighbours;
-            ResultMatrix = Matrix4.Identity;
 
             InitializeVAO();
         }

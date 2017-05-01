@@ -19,7 +19,7 @@ namespace robot
             mesh = new Mesh[6];
         }
 
-        internal Mesh[] GetMesh()
+        internal Mesh[] GetRobotMesh()
         {
             for (int i = 0; i < 6; i++)
             {
@@ -27,6 +27,43 @@ namespace robot
                 mesh[i] = LoadMesh(path);
             }
             return mesh;
+        }
+
+        public Mesh GetDoubleSidedRectangleMesh(float width, float height, Vector3 surfaceColor)
+        {
+            Vector3[] vertices = new Vector3[]
+            {
+                new Vector3(-width/2.0f, -height/2.0f, 0.0f),
+                new Vector3(-width/2.0f, height/2.0f, 0.0f),
+                new Vector3(width/2.0f, -height/2.0f, 0.0f),
+                new Vector3(width/2.0f, height/2.0f, 0.0f)
+            };
+            Vector3 faceNormal = Vector3.UnitZ;
+            Normalized[] normalized = new Normalized[]
+            {
+                //front face
+                new Normalized() {normal = faceNormal, vertex = vertices[0]},
+                new Normalized() {normal = faceNormal, vertex = vertices[1]},
+                new Normalized() {normal = faceNormal, vertex = vertices[2]},
+                new Normalized() {normal = faceNormal, vertex = vertices[2]},
+                new Normalized() {normal = faceNormal, vertex = vertices[1]},
+                new Normalized() {normal = faceNormal, vertex = vertices[3]},
+
+                //back face
+                new Normalized() {normal = -faceNormal, vertex = vertices[2]},
+                new Normalized() {normal = -faceNormal, vertex = vertices[1]},
+                new Normalized() {normal = -faceNormal, vertex = vertices[0]},
+                new Normalized() {normal = -faceNormal, vertex = vertices[3]},
+                new Normalized() {normal = -faceNormal, vertex = vertices[1]},
+                new Normalized() {normal = -faceNormal, vertex = vertices[2]}
+            };
+            uint[] indices = new uint[normalized.Length];
+            for (uint i = 0; i < indices.Length; i++)
+                indices[i] = i;
+
+            Mesh m = new Mesh(vertices, normalized, indices, null);
+            m.surfaceColor = surfaceColor;
+            return m;
         }
 
         private Mesh LoadMesh(string path)
