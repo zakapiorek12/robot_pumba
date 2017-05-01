@@ -31,7 +31,6 @@ namespace robot
 
         private Mesh LoadMesh(string path)
         {
-            Mesh mesh = new Mesh();
             List<Vector3> vertexes = new List<Vector3>();
             List<Normalized> normalized = new List<Normalized>();
             List<uint> indexes = new List<uint>();
@@ -106,12 +105,7 @@ namespace robot
                 }
             }
 
-            mesh.VertexBuffer = vertexes.ToArray();
-            mesh.NormalizedVertexBuffer = normalized.ToArray();
-            mesh.IndexBuffer = indexes.ToArray();
-            mesh.Neighbourhood = neighbours.ToArray();
-
-            return mesh;
+            return new Mesh(vertexes.ToArray(), normalized.ToArray(), indexes.ToArray(), neighbours.ToArray());
         }
     }
 }

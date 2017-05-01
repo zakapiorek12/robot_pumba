@@ -12,7 +12,6 @@ namespace robot
         private Matrix4 projectionMatrix;
         private int programId;
         private int vertexShader;
-        private int IBO, VBO;
         private int pixelShader;
         private Camera camera;
         private Mesh[] mesh;
@@ -34,6 +33,7 @@ namespace robot
             base.OnLoad(e);
             LoadShaders();
             CreateProjectionMatrix();
+            GL.EnableClientState(ArrayCap.VertexArray);
         }
 
         private void CreateProjectionMatrix()
@@ -53,37 +53,6 @@ namespace robot
         {
             base.OnRenderFrame(e);
             Render();
-        }
-
-        private void BindBuffers(Mesh m)
-        {
-            BindVertexBuffer(m.NormalizedVertexBuffer);
-            BindIndexBuffer(m.IndexBuffer);
-
-            GL.EnableClientState(ArrayCap.VertexArray);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            GL.VertexPointer(3, VertexPointerType.Float, Vector3.SizeInBytes, 0);
-
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, IBO);
-        }
-
-        private void BindVertexBuffer(Normalized[] noramlized)
-        {
-            VBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            //TODO normalne - SizeInBytes & Select
-            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(Vector3.SizeInBytes * noramlized.Length),
-                noramlized.Select((n) => n.vertex).ToArray(), BufferUsageHint.StaticDraw);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-        }
-
-        private void BindIndexBuffer(uint[] indexBuffer)
-        {
-            IBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, IBO);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, (IntPtr)(sizeof(uint) * indexBuffer.Length),
-                indexBuffer, BufferUsageHint.StaticDraw);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
         }
 
         private void LoadShaders()
@@ -145,7 +114,7 @@ namespace robot
 
             foreach (Mesh m in mesh)
             {
-                BindBuffers(m);
+                m.BindVAO();
                 GL.UniformMatrix4(projectionMatrixLocation, false, ref projectionMatrix);//shader
                 GL.UniformMatrix4(objectMatrixLocation, false, ref m.ResultMatrix);//shader
                 GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);

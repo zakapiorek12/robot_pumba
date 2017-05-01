@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTK;
+using OpenTK.Graphics.OpenGL;
 
 namespace robot
 {
     struct Normalized
     {
-        public static readonly int SizeInBytes = 2 * Vector3.SizeInBytes;
         public Vector3 vertex;
         public Vector3 normal;
     }
@@ -31,9 +31,70 @@ namespace robot
         public Normalized[] NormalizedVertexBuffer { get; set; }
         public Neighbour[] Neighbourhood { get; set; }
 
-        public Mesh()
+        private int VAOId;
+        private int positionVbo;
+        private int normalsVbo;
+        private int indicesVbo;
+
+        public Mesh(Vector3[] vertices, Normalized[] normalized, uint[] indices, Neighbour[] neighbours)
         {
+            this.VertexBuffer = vertices;
+            this.NormalizedVertexBuffer = normalized;
+            this.IndexBuffer = indices;
+            this.Neighbourhood = neighbours;
             ResultMatrix = Matrix4.Identity;
+
+            InitializeVAO();
+        }
+
+        public void BindVAO()
+        {
+            GL.BindVertexArray(VAOId);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, indicesVbo);
+        }
+
+        private void InitializeVAO()
+        {
+            CreateVbos();
+            CreateElementBufferObject();
+            
+            GL.GenVertexArrays(1, out VAOId);
+            GL.BindVertexArray(VAOId);
+
+            //element array buffer jest wyjatkiem - nie trzeba podawac layoutu - wystarczy zbindowac buffer przy bindowaniu stanu do danego VAO
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, positionVbo);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, 0);
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, normalsVbo);
+            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 0, 0);
+
+            GL.EnableVertexAttribArray(0);
+            GL.EnableVertexAttribArray(1);
+        }
+
+        private void CreateVbos()
+        {
+            positionVbo = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, positionVbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(Vector3.SizeInBytes * NormalizedVertexBuffer.Length),
+                NormalizedVertexBuffer.Select((n) => n.vertex).ToArray(), BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+
+            normalsVbo = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, normalsVbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(Vector3.SizeInBytes * NormalizedVertexBuffer.Length),
+                NormalizedVertexBuffer.Select((n) => n.normal).ToArray(), BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+        }
+
+        private void CreateElementBufferObject()
+        {
+            indicesVbo = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, indicesVbo);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, (IntPtr)(sizeof(uint) * IndexBuffer.Length),
+                IndexBuffer, BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
         }
     }
 }

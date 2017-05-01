@@ -6,8 +6,8 @@ uniform mat4 projection_matrix;
 uniform mat4 cameraview_matrix;
 uniform mat4 object_matrix;
 
-//TODO normalne - vec3 zmienić
 layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normals;
 
 void main()
 {
