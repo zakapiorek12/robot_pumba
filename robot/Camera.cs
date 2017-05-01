@@ -4,7 +4,7 @@ using System.Drawing;
 
 namespace robot
 {
-    class Camera
+    public class Camera
     {
         public Matrix4 Move, Rotation, ResultMatrix;
         float cameraDistMove = .05f;

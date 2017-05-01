@@ -8,13 +8,13 @@ using OpenTK.Graphics.OpenGL;
 
 namespace robot
 {
-    struct Normalized
+    public struct Normalized
     {
         public Vector3 vertex;
         public Vector3 normal;
     }
 
-    struct Neighbour
+    public struct Neighbour
     {
         public uint firstVertex;
         public uint secondVertex;
@@ -22,7 +22,7 @@ namespace robot
         public uint secondTriangle;
     }
 
-    class Mesh
+    public class Mesh
     {
         public Matrix4 ResultMatrix;
 

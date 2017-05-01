@@ -36,6 +36,6 @@ void main(){
         specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, fs_normal))), materialSpecExponent);
     vec3 specular = specularCoefficient * specularColor * lightColor;
 
-	color = vec4(normalize(fs_position), 1.0);
-    //color = vec4(ambient + diffuse + specular, 1.0);
+	//color = vec4(normalize(fs_position), 1.0);
+    color = vec4(ambient + diffuse + specular, 1.0);
 }
