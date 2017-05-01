@@ -10,14 +10,29 @@ namespace robot
     partial class MainWindow : GameWindow
     {
         private Matrix4 projectionMatrix;
+        private Camera camera;
+        private Mesh[] mesh;
+
         private int programId;
         private int vertexShader;
         private int pixelShader;
-        private Camera camera;
-        private Mesh[] mesh;
+
         private int projectionMatrixLocation;
         private int cameraviewMatrixLocation;
         private int objectMatrixLocation;
+        private int cameraModelMatrixLocation;
+
+        private int ambientCoefficientLocation;
+        private int lightPositionLocation;
+        private int lightColorLocation;
+
+        private int surfaceColorLocation;
+        private int materialSpecExponentLocation;
+        private int specularColorLocation;
+
+        private float ambientCoefficient = 1.0f;
+        private Vector3 lightColor = new Vector3(0.9f, 0.8f, 0.8f);
+        private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 0.0f);
 
         public MainWindow() : base()
         {
@@ -33,7 +48,6 @@ namespace robot
             base.OnLoad(e);
             LoadShaders();
             CreateProjectionMatrix();
-            GL.EnableClientState(ArrayCap.VertexArray);
         }
 
         private void CreateProjectionMatrix()
@@ -66,6 +80,19 @@ namespace robot
 
             GL.LinkProgram(programId);
             GL.UseProgram(programId);
+
+            projectionMatrixLocation = GL.GetUniformLocation(programId, "projection_matrix");
+            cameraviewMatrixLocation = GL.GetUniformLocation(programId, "cameraview_matrix");
+            cameraModelMatrixLocation = GL.GetUniformLocation(programId, "cameraModel_matrix");
+            objectMatrixLocation = GL.GetUniformLocation(programId, "object_matrix");
+
+            ambientCoefficientLocation = GL.GetUniformLocation(programId, "ambientCoefficient");
+            lightPositionLocation = GL.GetUniformLocation(programId, "lightPosition");
+            lightColorLocation = GL.GetUniformLocation(programId, "lightColor");
+
+            surfaceColorLocation = GL.GetUniformLocation(programId, "surfaceColor");
+            materialSpecExponentLocation = GL.GetUniformLocation(programId, "materialSpecExponent");
+            specularColorLocation = GL.GetUniformLocation(programId, "specularColor");
         }
 
         private string RootFolder()
@@ -110,13 +137,15 @@ namespace robot
             GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.ClearColor(Color.Black);
 
-            BindMartixes();
+            BindCameraAndProjectionToShaders();
+            BindLightDataToShaders();
 
             foreach (Mesh m in mesh)
             {
                 m.BindVAO();
-                GL.UniformMatrix4(projectionMatrixLocation, false, ref projectionMatrix);//shader
-                GL.UniformMatrix4(objectMatrixLocation, false, ref m.ResultMatrix);//shader
+                BindMeshMaterialDataToShaders(m);
+
+                GL.UniformMatrix4(objectMatrixLocation, false, ref m.ResultMatrix);
                 GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
                 GL.Flush();
             }
@@ -124,12 +153,25 @@ namespace robot
             SwapBuffers();
         }
 
-        private void BindMartixes()
+        private void BindCameraAndProjectionToShaders()
         {
-            projectionMatrixLocation = GL.GetUniformLocation(programId, "projection_matrix");//shader
-            cameraviewMatrixLocation = GL.GetUniformLocation(programId, "cameraview_matrix");//shader
-            objectMatrixLocation = GL.GetUniformLocation(programId, "object_matrix");//shader
-            GL.UniformMatrix4(cameraviewMatrixLocation, false, ref camera.ResultMatrix);//shader
+            GL.UniformMatrix4(cameraviewMatrixLocation, false, ref camera.ResultMatrix);
+            Matrix4 cameraModelMatrix = camera.ResultMatrix.Inverted();
+            GL.UniformMatrix4(cameraModelMatrixLocation, false, ref cameraModelMatrix);
+            GL.UniformMatrix4(projectionMatrixLocation, false, ref projectionMatrix);
+        }
+        private void BindLightDataToShaders()
+        {
+            GL.Uniform3(lightColorLocation, lightColor);
+            GL.Uniform3(lightPositionLocation, lightPosition);
+            GL.Uniform1(ambientCoefficientLocation, ambientCoefficient);
+        }
+
+        private void BindMeshMaterialDataToShaders(Mesh m)
+        {
+            GL.Uniform1(materialSpecExponentLocation, m.materialSpecExponent);
+            GL.Uniform3(specularColorLocation, m.materialSpecularColor);
+            GL.Uniform3(surfaceColorLocation, m.surfaceColor);
         }
     }
 }

@@ -36,6 +36,10 @@ namespace robot
         private int normalsVbo;
         private int indicesVbo;
 
+        public Vector3 surfaceColor = new Vector3(0.5f, 0.5f, 0.5f);
+        public float materialSpecExponent = 64f;
+        public Vector3 materialSpecularColor = new Vector3(1.0f, 0.0f, 0.0f);
+
         public Mesh(Vector3[] vertices, Normalized[] normalized, uint[] indices, Neighbour[] neighbours)
         {
             this.VertexBuffer = vertices;
@@ -71,6 +75,8 @@ namespace robot
 
             GL.EnableVertexAttribArray(0);
             GL.EnableVertexAttribArray(1);
+
+            GL.BindVertexArray(0);
         }
 
         private void CreateVbos()
