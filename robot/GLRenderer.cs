@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 
@@ -110,7 +107,7 @@ namespace robot
 
         private void CreateProjectionMatrix()
         {
-            projectionMatrix = Matrix4.Perspective(1f, 1f, .1f, 5f);
+            projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(1f, 1f, 1f, 25f);
         }
 
         private void CreateScene()
