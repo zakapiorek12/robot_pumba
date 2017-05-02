@@ -33,47 +33,47 @@ namespace robot
 
         public override void DoAnimation(float deltaTime)
         {
-            //currentAngle += angularSpeed*deltaTime;
-            //currentAngle %= (float)(2*Math.PI);
+            currentAngle += angularSpeed * deltaTime;
+            currentAngle %= (float)(2 * Math.PI);
 
-            //float endPointX = (float) (circleRadius*Math.Cos(currentAngle));
-            //float endPointY = (float)(circleRadius * Math.Sin(currentAngle));
-            //Vector4 endPointPos = new Vector4(endPointX, endPointY, 0.0f, 1.0f);
-            //endPointPos = Vector4.Transform(rectangle.ModelMatrix, endPointPos);
+            float endPointX = (float)(circleRadius * Math.Cos(currentAngle));
+            float endPointY = (float)(circleRadius * Math.Sin(currentAngle));
+            Vector4 endPointPos = new Vector4(endPointX, endPointY, 0.0f, 1.0f);
+            endPointPos = endPointPos * rectangle.ModelMatrix;
             //MeshLoader ml = new MeshLoader();
             //Mesh m = ml.GetDoubleSidedRectangleMesh(0.01f, 0.01f, new Vector3(1.0f, 0.0f, 0.0f));
             //m.ModelMatrix = Matrix4.CreateTranslation(endPointPos.Xyz);
             //GLRenderer.AddMeshToDraw(m);
-
-            //Vector4 endPointNormal = Vector4.Transform(rectangle.ModelMatrix.Inverted(), new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
-
-            //float a1, a2, a3, a4, a5;
-
-            //InverseKinematics(endPointPos.Xyz, endPointNormal.Xyz, out a1, out a2, out a3, out a4, out a5);
             
-            //meshes[1].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[1]) *
-            //    Matrix4.CreateRotationY(a1) *
-            //    Matrix4.CreateTranslation(rotationPivotPoints[1]);
-            
-            //meshes[2].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[2]) *
-            //                         Matrix4.CreateRotationZ(a2)*
-            //                         Matrix4.CreateTranslation(rotationPivotPoints[2]) *
-            //                         meshes[1].ModelMatrix;
+            Vector3 endPointNormal = (new Vector4(0.0f, 0.0f, -1.0f, 0.0f) * rectangle.ModelMatrix.Inverted()).Xyz.Normalized();
 
-            //meshes[3].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[3]) *
-            //                         Matrix4.CreateRotationZ(a3) *
-            //                         Matrix4.CreateTranslation(rotationPivotPoints[3]) *
-            //                         meshes[2].ModelMatrix;
+            float a1, a2, a3, a4, a5;
 
-            //meshes[4].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[4])*
-            //                         Matrix4.CreateRotationX(a4)*
-            //                         Matrix4.CreateTranslation(rotationPivotPoints[4])*
-            //                         meshes[3].ModelMatrix;
+            InverseKinematics(endPointPos.Xyz, endPointNormal, out a1, out a2, out a3, out a4, out a5);
 
-            //meshes[5].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[5]) *
-            //                         Matrix4.CreateRotationZ(a5) *
-            //                         Matrix4.CreateTranslation(rotationPivotPoints[5]) *
-            //                         meshes[4].ModelMatrix;
+            meshes[1].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[1]) *
+                Matrix4.CreateRotationY(a1) *
+                Matrix4.CreateTranslation(rotationPivotPoints[1]);
+
+            meshes[2].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[2]) *
+                                     Matrix4.CreateRotationZ(a2) *
+                                     Matrix4.CreateTranslation(rotationPivotPoints[2]) *
+                                     meshes[1].ModelMatrix;
+
+            meshes[3].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[3]) *
+                                     Matrix4.CreateRotationZ(a3) *
+                                     Matrix4.CreateTranslation(rotationPivotPoints[3]) *
+                                     meshes[2].ModelMatrix;
+
+            meshes[4].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[4]) *
+                                     Matrix4.CreateRotationZ(a5) *
+                                     Matrix4.CreateTranslation(rotationPivotPoints[4]) *
+                                     meshes[3].ModelMatrix;
+
+            meshes[5].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[5]) *
+                                     Matrix4.CreateRotationX(a4) *
+                                     Matrix4.CreateTranslation(rotationPivotPoints[5]) * 
+                                     meshes[4].ModelMatrix;
         }
         private void InverseKinematics(Vector3 pos, Vector3 normal, out float a1, out float a2, out float a3, out float a4, out float a5)
         {
