@@ -110,9 +110,7 @@ namespace robot
 
         private void CreateProjectionMatrix()
         {
-            projectionMatrix = Matrix4.Identity;
-            projectionMatrix[2, 2] = 0;
-            projectionMatrix[2, 3] = .25f;
+            projectionMatrix = Matrix4.Perspective(1f, 1f, .1f, 5f);
         }
 
         private void CreateScene()
@@ -138,8 +136,9 @@ namespace robot
 
         private void Render(Camera camera)
         {
-            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             GL.ClearColor(Color.Black);
+            GL.Enable(EnableCap.DepthTest);
 
             BindCameraAndProjectionToShaders(camera);
             BindLightDataToShaders();
