@@ -2,7 +2,7 @@
 {
     public abstract class AnimatedObject
     {
-        protected Mesh[] meshes;
+        public Mesh[] meshes { get; set; }
 
         protected AnimatedObject()
         {

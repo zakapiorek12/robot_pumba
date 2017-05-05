@@ -23,6 +23,8 @@ namespace robot
         public Robot(Mesh rectangle)
         {
             this.rectangle = rectangle;
+            foreach (Mesh m in meshes)
+                m.MainObject = true;
         }
 
         public override Mesh[] ProvideObjectMeshes()

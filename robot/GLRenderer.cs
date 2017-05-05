@@ -33,23 +33,22 @@ namespace robot
         private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 0.0f);
 
         private static List<Mesh> meshesToDraw = new List<Mesh>();
-        private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();  
+        private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
+        private bool previous;
 
         public GLRenderer()
         {
-            LoadShaders();
+            LoadShaders("");
             CreateProjectionMatrix();
             CreateScene();
         }
 
-        private void LoadShaders()
+        private void LoadShaders(string name)
         {
+            GL.DeleteProgram(programId);
             programId = GL.CreateProgram();
 
-            string root = RootFolder();
-
-            LoadVertexShader(root);
-            LoadPixelShader(root);
+            LoadShadersUsingName(name);
 
             GL.LinkProgram(programId);
             GL.UseProgram(programId);
@@ -68,20 +67,28 @@ namespace robot
             specularColorLocation = GL.GetUniformLocation(programId, "specularColor");
         }
 
+        private void LoadShadersUsingName(string name)
+        {
+            string root = RootFolder();
+
+            LoadVertexShader(root, name);
+            LoadPixelShader(root, name);
+        }
+
         private string RootFolder()
         {
-            vertexShader = GL.CreateShader(ShaderType.VertexShader);
-            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
             string root = Directory.GetCurrentDirectory();
             root += "\\shaders";
             return root;
         }
 
-        private void LoadVertexShader(string root)
+        private void LoadVertexShader(string root, string name)
         {
             int statusCode;
             string info;
-            string path = root + "\\VS.vert";
+            vertexShader = GL.CreateShader(ShaderType.VertexShader);
+            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+            string path = root + "\\VS" + name + ".vert";
             GL.ShaderSource(vertexShader, File.ReadAllText(path));
             GL.CompileShader(vertexShader);
             info = GL.GetShaderInfoLog(vertexShader);
@@ -90,13 +97,13 @@ namespace robot
             GL.AttachShader(programId, vertexShader);
         }
 
-        private void LoadPixelShader(string root)
+        private void LoadPixelShader(string root, string name)
         {
             int statusCode;
             string info;
             pixelShader = GL.CreateShader(ShaderType.FragmentShader);
             Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
-            string path = root + "\\PS.vert";
+            string path = root + "\\PS" + name + ".vert";
             GL.ShaderSource(pixelShader, File.ReadAllText(path));
             GL.CompileShader(pixelShader);
             info = GL.GetShaderInfoLog(pixelShader);
@@ -113,19 +120,21 @@ namespace robot
         private void CreateScene()
         {
             MeshLoader ml = new MeshLoader();
-            Mesh rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector3(0.8f, 1.0f, 1.0f));
-            AddMeshToDraw(rectangle);
-            rectangle.ModelMatrix = Matrix4.CreateRotationY((float) (Math.PI/2.0f))*
-                                     Matrix4.CreateRotationZ((float) (30.0f* Math.PI / 180.0f)) *
-                                     Matrix4.CreateTranslation(-1.0f, 0.0f, 0.0f);
-
+            Mesh rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
+            rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
+                                     Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
+                                     Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
+            rectangle.CalculateInverted();
             Robot robot = new Robot(rectangle);
+            Reflection reflection = new Reflection(robot, rectangle);
+            reflection.AddOnScene();
+            AddMeshToDraw(rectangle);
             robot.AddOnScene();
         }
 
         public void DoScene(float deltaTime, Camera camera)
         {
-            foreach(var anim in animatedObjects)
+            foreach (var anim in animatedObjects)
                 anim.DoAnimation(deltaTime);
 
             Render(camera);
@@ -136,12 +145,24 @@ namespace robot
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             GL.ClearColor(Color.Black);
             GL.Enable(EnableCap.DepthTest);
-
-            BindCameraAndProjectionToShaders(camera);
-            BindLightDataToShaders();
+            //GL.Enable(EnableCap.Texture2D);
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
 
             foreach (Mesh m in meshesToDraw)
             {
+                if (previous != m.MainObject)
+                {
+                    if (previous = m.MainObject)
+                        LoadShaders("");
+                    else
+                        LoadShaders("_Plate");
+
+                    BindCameraAndProjectionToShaders(camera);
+                    BindLightDataToShaders();
+                }
+
+
                 m.BindVAO();
                 BindMeshMaterialDataToShaders(m);
 
@@ -169,7 +190,7 @@ namespace robot
         {
             GL.Uniform1(materialSpecExponentLocation, m.materialSpecExponent);
             GL.Uniform3(specularColorLocation, m.materialSpecularColor);
-            GL.Uniform3(surfaceColorLocation, m.surfaceColor);
+            GL.Uniform4(surfaceColorLocation, m.surfaceColor);
         }
 
         public static void AddMeshToDraw(Mesh m)

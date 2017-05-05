@@ -21,11 +21,14 @@ namespace robot
 
     public class Mesh
     {
-        public Matrix4 ModelMatrix = Matrix4.Identity;
+        public Matrix4 ModelMatrix = Matrix4.Identity, InvertedModelMatrix;
 
         public uint[] IndexBuffer { get; set; }
         public Vector3[] VertexBuffer { get; set; }
         public Normalized[] NormalizedVertexBuffer { get; set; }
+        public bool MainObject { get; set; }
+
+
         public Neighbour[] Neighbourhood { get; set; }
 
         private int VAOId;
@@ -33,7 +36,7 @@ namespace robot
         private int normalsVbo;
         private int indicesVbo;
 
-        public Vector3 surfaceColor = new Vector3(0.5f, 0.5f, 0.5f);
+        public Vector4 surfaceColor = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
         public float materialSpecExponent = 64f;
         public Vector3 materialSpecularColor = new Vector3(1.0f, 0.0f, 0.0f);
 
@@ -97,6 +100,11 @@ namespace robot
             GL.BufferData(BufferTarget.ElementArrayBuffer, (IntPtr)(sizeof(uint) * IndexBuffer.Length),
                 IndexBuffer, BufferUsageHint.StaticDraw);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
+        }
+
+        public void CalculateInverted()
+        {
+            InvertedModelMatrix = ModelMatrix.Inverted();
         }
     }
 }

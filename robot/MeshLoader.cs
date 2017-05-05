@@ -25,7 +25,7 @@ namespace robot
             return mesh;
         }
 
-        public Mesh GetDoubleSidedRectangleMesh(float width, float height, Vector3 surfaceColor)
+        public Mesh GetDoubleSidedRectangleMesh(float width, float height, Vector4 surfaceColor)
         {
             Vector3[] vertices = new Vector3[]
             {
