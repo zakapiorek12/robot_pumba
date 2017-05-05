@@ -1,4 +1,5 @@
 ﻿using OpenTK;
+using OpenTK.Graphics.OpenGL;
 using System;
 using System.Drawing;
 
@@ -22,13 +23,12 @@ namespace robot
 
         private void CalculateResultMartix()
         {
-            ResultMatrix = ResultMatrix * Move * Rotation;
+            ResultMatrix = Move * Rotation;
         }
 
         public void MoveCamera(MoveEnum move)
         {
-            Move = Matrix4.Identity;
-            Rotation = Matrix4.Identity;
+            Move *= Rotation;
             switch (move)
             {
                 case MoveEnum.Left:
@@ -50,23 +50,30 @@ namespace robot
                     Move[3, 2] += cameraWheelMove;
                     break;
             }
+            Move *= Rotation.Inverted();
             CalculateResultMartix();
         }
 
         public void Rotate(Point move)
         {
-            Move = Matrix4.CreateTranslation(new Vector3((new Vector4(0, 0, 0, 1) * ResultMatrix)));
-            ResultMatrix = Matrix4.Identity;
-            latitude = move.Y * cameraRotate;
-            longitude = move.X * cameraRotate;
-            latitude = Math.Max(Math.Min(latitude, 90), -90);
-            Rotation = GetYRotationMatrix(longitude);
-            Rotation *= GetXRotationMatrix(latitude);
+            float xAngle = move.X * cameraRotate;
+            longitude += xAngle;
+            Rotation *= GetYRotationMatrix(xAngle);
+
+            float yAngle = move.Y * cameraRotate;
+            float newLatitude = latitude + yAngle;
+            if (newLatitude > -Math.PI / 2 &&
+                newLatitude < Math.PI / 2)
+            {
+                latitude = newLatitude;
+                Rotation *= GetXRotationMatrix(yAngle);
+            }
+
             CalculateResultMartix();
         }
 
 
-        private Matrix4 GetYRotationMatrix(double angle)
+        private Matrix4 GetYRotationMatrix(float angle)
         {
             float sin = (float)Math.Sin(angle);
             float cos = (float)Math.Sqrt(1 - sin * sin);
@@ -80,7 +87,7 @@ namespace robot
             return thisRotation;
         }
 
-        private Matrix4 GetXRotationMatrix(double angle)
+        private Matrix4 GetXRotationMatrix(float angle)
         {
             float sin = (float)Math.Sin(angle);
             float cos = (float)Math.Sqrt(1 - sin * sin);
