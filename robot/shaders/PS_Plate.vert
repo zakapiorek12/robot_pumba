@@ -1,4 +1,4 @@
-﻿#version 330 core
+﻿#version 110 core
 
 uniform mat4 projection_matrix;
 uniform mat4 cameraview_matrix;
@@ -21,11 +21,6 @@ in vec3 vs_position;
 out vec4 color;
 
 void main(){
-	if(vs_position.x <= -1)
-	{
-		color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-		return;
-	}
 	vec3 surfaceToLight = normalize(lightPosition - fs_position);
 	vec3 surfaceToCamera = normalize((cameraModel_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz - fs_position);
 

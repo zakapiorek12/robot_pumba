@@ -15,9 +15,8 @@ namespace robot
 
         public Camera() : base()
         {
-            Move = Matrix4.Identity;
-            Rotation = Matrix4.Identity;
-            ResultMatrix = Matrix4.Identity;
+            Move = Matrix4.CreateTranslation(0, 0, -3);
+            Rotation = Matrix4.CreateRotationY(-30 * (float)Math.PI / 360);
             CalculateResultMartix();
         }
 
