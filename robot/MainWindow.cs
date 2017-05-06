@@ -20,13 +20,14 @@ namespace robot
             base.OnLoad(e);
 
             camera = new Camera();
-            glRenderer = new GLRenderer();
+            glRenderer = new GLRenderer(this.Width, this.Height);
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
             GL.Viewport(this.ClientRectangle);
+            glRenderer.CreateProjectionMatrix(this.Width, this.Height);
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)

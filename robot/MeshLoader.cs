@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using OpenTK;
@@ -59,7 +60,91 @@ namespace robot
 
             Mesh m = new Mesh(vertices, normalized, indices, null);
             m.surfaceColor = surfaceColor;
+            m.materialDiffuseSpecularColor = surfaceColor.Xyz;
             return m;
+        }
+
+        public Mesh GetCylinderMesh(float radius, float height, Vector4 surfaceColor, int divisions)
+        {
+            List<Vector3> verticesList = new List<Vector3>();
+            List<uint> indicesList = new List<uint>();
+            uint currentInd = 0;
+
+            float angleStep = (float) (Math.PI*2.0f/divisions);
+            for (int i = 0; i <= divisions; i++)
+            {
+                float angle = i*angleStep;
+                float x = (float) (radius*Math.Cos(angle));
+                float z = (float) (radius*Math.Sin(angle));
+
+                if (i != divisions)
+                {
+                    verticesList.Add(new Vector3(x, -height/2.0f, z));
+                    verticesList.Add(new Vector3(x, height/2.0f, z));
+                }
+
+                if (i == divisions)
+                {
+                    indicesList.Add(currentInd);
+                    indicesList.Add(currentInd + 1);
+                    indicesList.Add(0);
+                    indicesList.Add(0);
+                    indicesList.Add(currentInd + 1);
+                    indicesList.Add(1);
+                }
+                else if (i > 0)
+                {
+                    indicesList.Add(currentInd);
+                    indicesList.Add(currentInd+1);
+                    indicesList.Add(currentInd+2);
+                    indicesList.Add(currentInd+2);
+                    indicesList.Add(currentInd+1);
+                    indicesList.Add(currentInd+3);
+                    currentInd += 2;
+                }
+            }
+            Vector3[] normals = CalculateNormals(verticesList.ToArray(), indicesList.ToArray());
+            Normalized[] normalized = new Normalized[indicesList.Count];
+            for(int i = 0; i < indicesList.Count; i++)
+                normalized[i] = new Normalized() {normal = normals[indicesList[i]], vertex = verticesList[(int) indicesList[i]]};
+
+            uint[] indices = new uint[normalized.Length];
+            for (uint i = 0; i < indices.Length; i++)
+                indices[i] = i;
+            Mesh m = new Mesh(verticesList.ToArray(), normalized, indices, null);
+            m.surfaceColor = surfaceColor;
+            m.materialDiffuseSpecularColor = surfaceColor.Xyz;
+            return m;
+        }
+
+        protected Vector3[] CalculateNormals(Vector3[] verts, uint[] indices)
+        {
+            Vector3[] result = new Vector3[verts.Length];
+            int j = 0;
+            Dictionary<uint, Tuple<uint, Vector3>> normals = new Dictionary<uint, Tuple<uint, Vector3>>();
+            for (int i = 0; i < indices.Length; i++)
+            {
+                if (i != 0 && i % 3 == 0)
+                    j += 3;
+                Vector3 vec1 = new Vector3(verts[indices[j + 1]] - verts[indices[j + 2]]);
+                Vector3 vec2 = new Vector3(verts[indices[j + 1]] - verts[indices[j]]);
+                Vector3 averageNormal = Vector3.Cross(vec1, vec2);
+                if (!normals.ContainsKey(indices[i]))
+                    normals.Add(indices[i], new Tuple<uint, Vector3>(1, averageNormal));
+                else
+                {
+                    Tuple<uint, Vector3> old = normals[indices[i]];
+                    normals[indices[i]] = new Tuple<uint, Vector3>(old.Item1 + 1, old.Item2 + averageNormal);
+                }
+            }
+            for (uint i = 0; i < normals.Count; i++)
+            {
+                Tuple<uint, Vector3> norm = normals[i];
+                result[i] = norm.Item2 / norm.Item1;
+                result[i].Normalize();
+            }
+
+            return result;
         }
 
         private Mesh LoadMesh(string path)

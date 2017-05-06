@@ -11,7 +11,7 @@ namespace robot
 
         private Vector3[] rotationPivotPoints = new Vector3[]
         {
-            new Vector3(0, 0, 0), 
+            new Vector3(0, 0, 0), //not used - inserted for convenience when indexing
             new Vector3(0, 0.27f, 0),
             new Vector3(0, 0.27f, 0.26f),
             new Vector3(-0.91f, 0.27f, -0.26f),
@@ -47,7 +47,7 @@ namespace robot
             //m.ModelMatrix = Matrix4.CreateTranslation(endPointPos.Xyz);
             //GLRenderer.AddMeshToDraw(m);
             
-            Vector3 endPointNormal = (new Vector4(0.0f, 0.0f, -1.0f, 0.0f) * rectangle.ModelMatrix.Inverted()).Xyz.Normalized();
+            Vector3 endPointNormal = (new Vector4(0.0f, 0.0f, 1.0f, 0.0f) * rectangle.ModelMatrix).Xyz.Normalized();
 
             float a1, a2, a3, a4, a5;
 
@@ -68,14 +68,14 @@ namespace robot
                                      meshes[2].ModelMatrix;
 
             meshes[4].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[4]) *
-                                     Matrix4.CreateRotationZ(a5) *
+                                     Matrix4.CreateRotationX(a4) *
                                      Matrix4.CreateTranslation(rotationPivotPoints[4]) *
                                      meshes[3].ModelMatrix;
 
-            meshes[5].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[5]) *
-                                     Matrix4.CreateRotationX(a4) *
-                                     Matrix4.CreateTranslation(rotationPivotPoints[5]) * 
-                                     meshes[4].ModelMatrix;
+            meshes[5].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[4])*
+                                    Matrix4.CreateRotationZ((float)(-a5))*
+                                    Matrix4.CreateTranslation(rotationPivotPoints[4]) *
+                                    meshes[4].ModelMatrix;
         }
         private void InverseKinematics(Vector3 pos, Vector3 normal, out float a1, out float a2, out float a3, out float a4, out float a5)
         {

@@ -30,16 +30,16 @@ namespace robot
 
         private float ambientCoefficient = 1.0f;
         private Vector3 lightColor = new Vector3(0.9f, 0.8f, 0.8f);
-        private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 0.0f);
+        private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 1.0f);
 
         private static List<Mesh> meshesToDraw = new List<Mesh>();
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
         private bool previous;
 
-        public GLRenderer()
+        public GLRenderer(int viewPortWidth, int viewportHeight)
         {
             LoadShaders("");
-            CreateProjectionMatrix();
+            CreateProjectionMatrix(viewPortWidth, viewportHeight);
             CreateScene();
         }
 
@@ -112,9 +112,20 @@ namespace robot
             GL.AttachShader(programId, pixelShader);
         }
 
-        private void CreateProjectionMatrix()
+        public void CreateProjectionMatrix(int viewportWidth, int viewportHeight)
         {
-            projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(1f, 1f, 1f, 25f);
+            float far = (float)25.0f;
+            float near = (float)0.01f;
+            float fov = (float)(90f / 180f * Math.PI);
+            float e = (float)(1f / Math.Tan(fov / 2f));
+            float a = (float)viewportHeight / (float)viewportWidth;
+
+            projectionMatrix = new Matrix4(
+                e, 0, 0, 0,
+                0, e / a, 0, 0,
+                0, 0, -(far + near) / (far - near), -2f * far * near / (far - near),
+                0, 0, -1, 0);
+            projectionMatrix.Transpose();
         }
 
         private void CreateScene()
@@ -122,14 +133,24 @@ namespace robot
             MeshLoader ml = new MeshLoader();
             Mesh rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
-                                     Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
+                                     //Matrix4.CreateRotationZ((float)(60.0f * Math.PI / 180.0f)) *
                                      Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
             rectangle.CalculateInverted();
             Robot robot = new Robot(rectangle);
-            Reflection reflection = new Reflection(robot, rectangle);
-            reflection.AddOnScene();
+            //Reflection reflection = new Reflection(robot, rectangle);
+            //reflection.AddOnScene();
             AddMeshToDraw(rectangle);
             robot.AddOnScene();
+
+            float floorYOffset = -1.0f;
+            Mesh floor = ml.GetDoubleSidedRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
+            floor.ModelMatrix = Matrix4.CreateRotationX((float) (Math.PI/2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
+            GLRenderer.AddMeshToDraw(floor);
+
+            Mesh cylinder = ml.GetCylinderMesh(0.5f, 2.5f, new Vector4(0, 0, 1, 1), 360);
+            cylinder.ModelMatrix = Matrix4.CreateRotationX((float) (Math.PI/2.0f))*
+                                   Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f);
+            AddMeshToDraw(cylinder);
         }
 
         public void DoScene(float deltaTime, Camera camera)
@@ -189,7 +210,7 @@ namespace robot
         private void BindMeshMaterialDataToShaders(Mesh m)
         {
             GL.Uniform1(materialSpecExponentLocation, m.materialSpecExponent);
-            GL.Uniform3(specularColorLocation, m.materialSpecularColor);
+            GL.Uniform3(specularColorLocation, m.materialDiffuseSpecularColor);
             GL.Uniform4(surfaceColorLocation, m.surfaceColor);
         }
 

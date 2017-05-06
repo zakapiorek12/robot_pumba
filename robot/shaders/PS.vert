@@ -28,7 +28,7 @@ void main(){
 
     //diffuse
     float diffuseCoefficient = max(0.0, dot(fs_normal, surfaceToLight));
-    vec3 diffuse = diffuseCoefficient * surfaceColor.xyz * lightColor;
+    vec3 diffuse = diffuseCoefficient * specularColor * lightColor;
     
     //specular
     float specularCoefficient = 0.0;

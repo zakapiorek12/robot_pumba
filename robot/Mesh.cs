@@ -37,8 +37,8 @@ namespace robot
         private int indicesVbo;
 
         public Vector4 surfaceColor = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
-        public float materialSpecExponent = 64f;
-        public Vector3 materialSpecularColor = new Vector3(1.0f, 0.0f, 0.0f);
+        public float materialSpecExponent = 32f;
+        public Vector3 materialDiffuseSpecularColor = new Vector3(0.5f, 0.5f, 0.5f);
 
         public Mesh(Vector3[] vertices, Normalized[] normalized, uint[] indices, Neighbour[] neighbours)
         {
