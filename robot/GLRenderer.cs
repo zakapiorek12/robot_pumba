@@ -28,6 +28,8 @@ namespace robot
         private int materialSpecExponentLocation;
         private int specularColorLocation;
 
+        private int isRectangle;
+
         private float ambientCoefficient = 1.0f;
         private Vector3 lightColor = new Vector3(0.9f, 0.8f, 0.8f);
         private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 1.0f);
@@ -35,6 +37,8 @@ namespace robot
         private static List<Mesh> meshesToDraw = new List<Mesh>();
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
         private bool previous;
+        private Mesh rectangle;
+        private Reflection reflection;
 
         public GLRenderer(int viewPortWidth, int viewportHeight)
         {
@@ -65,6 +69,8 @@ namespace robot
             surfaceColorLocation = GL.GetUniformLocation(programId, "surfaceColor");
             materialSpecExponentLocation = GL.GetUniformLocation(programId, "materialSpecExponent");
             specularColorLocation = GL.GetUniformLocation(programId, "specularColor");
+
+            isRectangle = GL.GetUniformLocation(programId, "isRectangle");
         }
 
         private void LoadShadersUsingName(string name)
@@ -131,14 +137,15 @@ namespace robot
         private void CreateScene()
         {
             MeshLoader ml = new MeshLoader();
-            Mesh rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
+            rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
                                      //Matrix4.CreateRotationZ((float)(60.0f * Math.PI / 180.0f)) *
                                      Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
             rectangle.CalculateInverted();
             Robot robot = new Robot(rectangle);
-            //Reflection reflection = new Reflection(robot, rectangle);
-            //reflection.AddOnScene();
+
+            reflection = new Reflection(robot, rectangle);
+            reflection.AddOnScene();
             AddMeshToDraw(rectangle);
             robot.AddOnScene();
 
@@ -163,34 +170,104 @@ namespace robot
 
         private void Render(Camera camera)
         {
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
             GL.ClearColor(Color.Black);
             GL.Enable(EnableCap.DepthTest);
-            //GL.Enable(EnableCap.Texture2D);
+
             GL.Enable(EnableCap.Blend);
+
             GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
 
+
+            Stencil();
             foreach (Mesh m in meshesToDraw)
             {
                 if (previous != m.MainObject)
                 {
                     if (previous = m.MainObject)
+                    {
                         LoadShaders("");
+                        //GL.ClearDepth(1);
+                        //GL.DepthFunc(DepthFunction.Less);
+                        //GL.Clear(ClearBufferMask.DepthBufferBit);
+                    }
                     else
+                    {
                         LoadShaders("_Plate");
+                    }
 
                     BindCameraAndProjectionToShaders(camera);
                     BindLightDataToShaders();
                 }
 
-
-                m.BindVAO();
-                BindMeshMaterialDataToShaders(m);
-
-                GL.UniformMatrix4(objectMatrixLocation, false, ref m.ModelMatrix);
-                GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
-                GL.Flush();
+                DrawMesh(m);
             }
+
+            GL.Flush();
+        }
+
+        private void DrawMesh(Mesh m)
+        {
+            m.BindVAO();
+            BindMeshMaterialDataToShaders(m);
+
+            GL.UniformMatrix4(objectMatrixLocation, false, ref m.ModelMatrix);
+            GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
+        }
+
+        private void Stencil()
+        {
+            //GL.Enable(EnableCap.StencilTest);
+            ////GL.ClearStencil(0);
+            //GL.Clear(ClearBufferMask.StencilBufferBit);
+            ////GL.ColorMask(false, false, false, false);
+            //GL.StencilFunc(StencilFunction.Always, 1, 1);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Replace);
+
+            //// Draw the stencil texture
+            ////GL.BindTexture(TextureTarget.Texture2D, stencilBuffer);
+
+            //GL.Disable(EnableCap.DepthTest);
+            //Vector4 prev = rectangle.surfaceColor;
+            //rectangle.surfaceColor = new Vector4(0.3f, 0.8f, 0.5f, 0.6f);    // change color - test
+            //DrawMesh(rectangle);
+            //rectangle.surfaceColor = prev;
+            //GL.Enable(EnableCap.DepthTest);
+
+            //GL.Disable(EnableCap.StencilTest);
+            //GL.StencilFunc(StencilFunction.Equal, 1, 1);
+            //GL.StencilMask(0x00);
+            //GL.ColorMask(true, true, true, true);
+
+            //-------------------------------------------------------------------------
+
+            //GL.Enable(EnableCap.StencilTest);
+            //GL.StencilMask(0);
+            //GL.StencilFunc(StencilFunction.Always, 1, 1);
+            //GL.StencilOp(StencilOp.Replace, StencilOp.Replace, StencilOp.Replace);
+            ////GL.DepthMask(false);
+            //GL.Clear(ClearBufferMask.StencilBufferBit);
+
+            ////glDrawArrays(GL_TRIANGLES, 36, 6);
+            //DrawMesh(rectangle);
+
+            //GL.StencilFunc(StencilFunction.Equal, 0, 1);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
+            //GL.DepthMask(true);
+
+            //-----------------------------------------------------------------------------------------
+
+            //GL.ClearDepth(1);
+            //GL.DepthFunc(DepthFunction.Always);
+
+            //GL.Uniform1(isRectangle, 1);
+            //DrawMesh(rectangle);
+            //GL.Uniform1(isRectangle, 0);
+
+            //GL.DepthFunc(DepthFunction.Greater);
+
+            //////////
+            DrawMesh(rectangle);
         }
 
         private void BindCameraAndProjectionToShaders(Camera camera)

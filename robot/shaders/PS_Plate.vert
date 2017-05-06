@@ -1,4 +1,4 @@
-﻿#version 330 core
+﻿#version 110 core
 
 uniform mat4 projection_matrix;
 uniform mat4 cameraview_matrix;
