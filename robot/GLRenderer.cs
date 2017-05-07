@@ -139,7 +139,7 @@ namespace robot
             MeshLoader ml = new MeshLoader();
             rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
-                                     //Matrix4.CreateRotationZ((float)(60.0f * Math.PI / 180.0f)) *
+                                     Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
                                      Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
             rectangle.CalculateInverted();
             Robot robot = new Robot(rectangle);

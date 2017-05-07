@@ -15,8 +15,8 @@ namespace robot
             new Vector3(0, 0.27f, 0),
             new Vector3(0, 0.27f, 0.26f),
             new Vector3(-0.91f, 0.27f, -0.26f),
-            new Vector3(-1.72f, 0.27f, -0.26f),
-            new Vector3(-2.05f, 0.27f, -0.26f)
+            new Vector3(-2.05f, 0.27f, -0.26f),
+            new Vector3(-1.72f, 0.27f, -0.26f)
         };
         private Mesh rectangle;
 
@@ -72,28 +72,32 @@ namespace robot
                                      Matrix4.CreateTranslation(rotationPivotPoints[4]) *
                                      meshes[3].ModelMatrix;
 
-            meshes[5].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[4])*
-                                    Matrix4.CreateRotationZ((float)(-a5))*
-                                    Matrix4.CreateTranslation(rotationPivotPoints[4]) *
+            meshes[5].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[5])*
+                                    Matrix4.CreateRotationZ(a5)*
+                                    Matrix4.CreateTranslation(rotationPivotPoints[5]) *
                                     meshes[4].ModelMatrix;
         }
         private void InverseKinematics(Vector3 pos, Vector3 normal, out float a1, out float a2, out float a3, out float a4, out float a5)
         {
             float l1 = .91f, l2 = .81f, l3 = .33f, dy = .27f, dz = .26f;
             normal.Normalize();
-            Vector3 pos1 = pos + normal *l3;
-            float e = (float) Math.Sqrt(pos1.Z * pos1.Z + pos1.X * pos1.X-dz * dz);
-            a1 = (float) (Math.Atan2(pos1.Z,-pos1.X) + Math.Atan2(dz, e));
-            Vector3 pos2 = new Vector3(e, pos1.Y -dy, 0.0f);
-            a3 = (float) -Math.Acos(Math.Min(1.0f, (pos2.X * pos2.X+ pos2.Y * pos2.Y-l1 * l1-l2 * l2)/ (2.0f * l1 * l2)));
-            float k = (float) (l1 + l2*Math.Cos(a3));
-            float l = (float) (l2 * Math.Sin(a3));
-            a2 =(float) (-Math.Atan2(pos2.Y, Math.Sqrt(pos2.X * pos2.X + pos2.Z * pos2.Z))-Math.Atan2(l, k));
+            Vector3 pos1 = pos + normal * l3;
+
+            float e = (float)Math.Sqrt(pos1.Z * pos1.Z + pos1.X * pos1.X - dz * dz);
+            a1 = (float)(Math.Atan2(pos1.Z, -pos1.X) + Math.Atan2(dz, e));
+
+            Vector3 pos2 = new Vector3(e, pos1.Y - dy, 0.0f);
+            a3 = (float)-Math.Acos(Math.Min(1.0f, (pos2.X * pos2.X + pos2.Y * pos2.Y - l1 * l1 - l2 * l2) / (2.0f * l1 * l2)));
+
+            float k = (float)(l1 + l2 * Math.Cos(a3));
+            float l = (float)(l2 * Math.Sin(a3));
+            a2 = (float)(-Math.Atan2(pos2.Y, Math.Sqrt(pos2.X * pos2.X + pos2.Z * pos2.Z)) - Math.Atan2(l, k));
+
             Vector3 normal1;
-            normal1 = new Vector3( Matrix4.CreateRotationY(-a1) *new Vector4(normal.X, normal.Y, normal.Z, 0.0f));
-            normal1 = new Vector3( Matrix4.CreateRotationZ(-(a2 + a3)) *new Vector4(normal1.X, normal1.Y, normal1.Z, 0.0f));
-            a5 = (float) Math.Acos(normal1.X);
-            a4 = (float) Math.Atan2(normal1.Z, normal1.Y);
+            normal1 = new Vector3(Matrix4.CreateRotationY(a1) * new Vector4(normal, 0.0f));
+            normal1 = new Vector3(Matrix4.CreateRotationZ((a2 + a3)) * new Vector4(normal1, 0.0f));
+            a5 = (float)Math.Acos(normal1.X);
+            a4 = (float)Math.Atan2(normal1.Z, normal1.Y);
         }
 
     }
