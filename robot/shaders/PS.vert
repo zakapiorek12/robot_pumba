@@ -20,9 +20,10 @@ in vec3 fs_normal;
 out vec4 color;
 
 void main(){
-	vec3 normal = (object_matrix * vec4(fs_normal, 0.0)).xyz;
-	vec3 surfaceToLight = normalize(lightPosition - fs_position);
-	vec3 surfaceToCamera = normalize((cameraModel_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz - fs_position);
+	vec3 normal = normalize(transpose(inverse(mat3(object_matrix))) * fs_normal);
+	vec3 surfacePos = vec3(object_matrix * vec4(fs_position, 1));
+	vec3 surfaceToLight = normalize(lightPosition - surfacePos);
+	vec3 surfaceToCamera = normalize((cameraModel_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz - surfacePos);
 
 	//ambient
     vec3 ambient = ambientCoefficient * lightColor * surfaceColor.xyz;
