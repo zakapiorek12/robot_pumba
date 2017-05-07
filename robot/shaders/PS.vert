@@ -39,5 +39,5 @@ void main(){
     vec3 specular = specularCoefficient * specularColor * lightColor;
 
 	//color = vec4(normalize(fs_position), 1.0);
-    color = vec4(ambient + diffuse + specular, 1.0f);
+    color = vec4(ambient + diffuse + specular, surfaceColor.a);
 }

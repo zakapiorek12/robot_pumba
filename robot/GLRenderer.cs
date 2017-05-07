@@ -78,7 +78,7 @@ namespace robot
 
         private void CreateScene()
         {
-            rectangle = meshLoader.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
+            rectangle = meshLoader.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.4f, 0.4f, 1.0f, 0.5f));
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
                                      Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
                                      Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
@@ -86,8 +86,10 @@ namespace robot
             robot = new Robot(rectangle);
 
             reflection = new Reflection(robot, rectangle);
-            reflection.AddOnScene(MyShaderType.PHONG_LIGHT);
+            AddAnimatedObject(reflection);
+
             AddMeshToDraw(rectangle, MyShaderType.PHONG_LIGHT);
+
             robot.AddOnScene(MyShaderType.PHONG_LIGHT);
 
             float floorYOffset = -1.0f;
@@ -127,7 +129,7 @@ namespace robot
             BindLightDataToShaders(activeShader);
 
             //RenderShadows();
-            //Stencil(activeShader);
+            Stencil(activeShader);
             foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
                 DrawMesh(m, activeShader);
 
@@ -290,57 +292,24 @@ namespace robot
 
         private void Stencil(ShaderProgram shader)
         {
-            //GL.Enable(EnableCap.StencilTest);
-            ////GL.ClearStencil(0);
-            //GL.Clear(ClearBufferMask.StencilBufferBit);
-            ////GL.ColorMask(false, false, false, false);
-            //GL.StencilFunc(StencilFunction.Always, 1, 1);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Replace);
+            GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit | ClearBufferMask.StencilBufferBit);
 
-            //// Draw the stencil texture
-            ////GL.BindTexture(TextureTarget.Texture2D, stencilBuffer);
-
-            //GL.Disable(EnableCap.DepthTest);
-            //Vector4 prev = rectangle.surfaceColor;
-            //rectangle.surfaceColor = new Vector4(0.3f, 0.8f, 0.5f, 0.6f);    // change color - test
-            //DrawMesh(rectangle);
-            //rectangle.surfaceColor = prev;
-            //GL.Enable(EnableCap.DepthTest);
-
-            //GL.Disable(EnableCap.StencilTest);
-            //GL.StencilFunc(StencilFunction.Equal, 1, 1);
-            //GL.StencilMask(0x00);
-            //GL.ColorMask(true, true, true, true);
-
-            //-------------------------------------------------------------------------
-
-            //GL.Enable(EnableCap.StencilTest);
-            //GL.StencilMask(0);
-            //GL.StencilFunc(StencilFunction.Always, 1, 1);
-            //GL.StencilOp(StencilOp.Replace, StencilOp.Replace, StencilOp.Replace);
-            ////GL.DepthMask(false);
-            //GL.Clear(ClearBufferMask.StencilBufferBit);
-
-            ////glDrawArrays(GL_TRIANGLES, 36, 6);
-            //DrawMesh(rectangle);
-
-            //GL.StencilFunc(StencilFunction.Equal, 0, 1);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
-            //GL.DepthMask(true);
-
-            //-----------------------------------------------------------------------------------------
-
-            //GL.ClearDepth(1);
-            //GL.DepthFunc(DepthFunction.Always);
-
-            //GL.Uniform1(isRectangle, 1);
-            //DrawMesh(rectangle);
-            //GL.Uniform1(isRectangle, 0);
-
-            //GL.DepthFunc(DepthFunction.Greater);
-
-            //////////
+            GL.DepthMask(false);
+            GL.Enable(EnableCap.StencilTest);
+            GL.StencilMask(~0);
+            GL.StencilFunc(StencilFunction.Always, 1, ~0);
+            GL.StencilOp(StencilOp.Zero, StencilOp.Zero, StencilOp.Replace);
+            
             DrawMesh(rectangle, shader);
+            
+            GL.StencilMask(0);
+            GL.DepthMask(true);
+            GL.StencilFunc(StencilFunction.Equal, 1, ~0);
+            GL.StencilOp(StencilOp.Zero, StencilOp.Zero, StencilOp.Replace);
+            foreach (var mesh in reflection.meshes)
+                DrawMesh(mesh, shader);
+
+            GL.Disable(EnableCap.StencilTest);
         }
 
         private void BindCameraAndProjectionToShaders(Camera camera, ShaderProgram shader)

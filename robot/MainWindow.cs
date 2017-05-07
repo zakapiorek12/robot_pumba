@@ -1,5 +1,6 @@
 ﻿using System;
 using OpenTK;
+using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 
 namespace robot
@@ -9,7 +10,8 @@ namespace robot
         private Camera camera;
         private GLRenderer glRenderer;
 
-        public MainWindow() : base()
+        public MainWindow() : 
+            base(800, 600, new GraphicsMode(new ColorFormat(8, 8, 8, 8), 24, 8))
         {
             InitEvents();
             Title = "PUMBA";
