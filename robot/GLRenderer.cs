@@ -324,16 +324,17 @@ namespace robot
 
         private void Stencil(ShaderProgram shader)
         {
-            GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit | ClearBufferMask.StencilBufferBit);
+            GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
 
             GL.DepthMask(false);
             GL.Enable(EnableCap.StencilTest);
             GL.StencilMask(~0);
             GL.StencilFunc(StencilFunction.Always, 1, ~0);
             GL.StencilOp(StencilOp.Zero, StencilOp.Zero, StencilOp.Replace);
-            
+            GL.Clear(ClearBufferMask.StencilBufferBit);
+
             DrawMesh(rectangle, shader);
-            
+
             GL.StencilMask(0);
             GL.DepthMask(true);
             GL.StencilFunc(StencilFunction.Equal, 1, ~0);
