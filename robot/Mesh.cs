@@ -9,6 +9,7 @@ namespace robot
     {
         public Vector3 vertex;
         public Vector3 normal;
+        public Vector2 texturePos;
     }
 
     public struct Neighbour
@@ -54,10 +55,12 @@ namespace robot
         private int positionVbo;
         private int normalsVbo;
         private int indicesVbo;
+        private int textureVbo;
 
         public Vector4 surfaceColor = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
         public float materialSpecExponent = 32f;
         public Vector3 materialDiffuseSpecularColor = new Vector3(0.5f, 0.5f, 0.5f);
+        public int isPlate = 0;
 
         public Mesh(Vector3[] vertices, Normalized[] normalized, uint[] indices, Neighbour[] neighbours, Triangle[] triangles = null)
         {
@@ -93,8 +96,12 @@ namespace robot
             GL.BindBuffer(BufferTarget.ArrayBuffer, normalsVbo);
             GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 0, 0);
 
+            GL.BindBuffer(BufferTarget.ArrayBuffer, textureVbo);
+            GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, 0, 0);
+
             GL.EnableVertexAttribArray(0);
             GL.EnableVertexAttribArray(1);
+            GL.EnableVertexAttribArray(2);
 
             GL.BindVertexArray(0);
         }
@@ -103,6 +110,7 @@ namespace robot
         {
             positionVbo = GL.GenBuffer();
             normalsVbo = GL.GenBuffer();
+            textureVbo = GL.GenBuffer();
         }
 
         public void FillVbos()
@@ -115,6 +123,11 @@ namespace robot
             GL.BindBuffer(BufferTarget.ArrayBuffer, normalsVbo);
             GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(Vector3.SizeInBytes * NormalizedVertexBuffer.Length),
                 NormalizedVertexBuffer.Select((n) => n.normal).ToArray(), BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, textureVbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(Vector2.SizeInBytes * NormalizedVertexBuffer.Length),
+                NormalizedVertexBuffer.Select((n) => n.texturePos).ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
         }
 
