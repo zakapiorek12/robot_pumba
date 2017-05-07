@@ -329,7 +329,8 @@ namespace robot
             GL.DepthMask(false);
             GL.Enable(EnableCap.StencilTest);
             GL.StencilMask(~0);
-            GL.StencilFunc(StencilFunction.Always, 1, ~0);
+            GL.StencilFuncSeparate(StencilFace.Back, StencilFunction.Never, 1, ~0);
+            GL.StencilFuncSeparate(StencilFace.Front, StencilFunction.Always, 1, ~0);
             GL.StencilOp(StencilOp.Zero, StencilOp.Zero, StencilOp.Replace);
             GL.Clear(ClearBufferMask.StencilBufferBit);
 
