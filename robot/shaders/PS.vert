@@ -6,6 +6,8 @@ uniform mat4 cameraModel_matrix; //inverse of cameraView_matrix
 
 uniform mat4 object_matrix;
 
+uniform bool drawUnlitScene;
+
 uniform float ambientCoefficient;
 uniform vec3 lightPosition;
 uniform vec3 lightColor;
@@ -31,17 +33,21 @@ void main(){
 
 	//ambient
     vec3 ambient = ambientCoefficient * lightColor * surfaceColor.xyz;
+	vec3 diffuse = vec3(0.0, 0.0, 0.0);
+	vec3 specular = vec3(0.0, 0.0, 0.0);
 
-    //diffuse
-    float diffuseCoefficient = max(0.0, dot(normal, surfaceToLight));
-    vec3 diffuse = diffuseCoefficient * specularColor * lightColor;
+	if(!drawUnlitScene)
+	{
+		//diffuse
+		float diffuseCoefficient = max(0.0, dot(normal, surfaceToLight));
+		diffuse = diffuseCoefficient * specularColor * lightColor;
     
-    //specular
-    float specularCoefficient = 0.0;
-    if(diffuseCoefficient > 0.0)
-        specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, normal))), materialSpecExponent);
-    vec3 specular = specularCoefficient * specularColor * lightColor;
-
+		//specular
+		float specularCoefficient = 0.0;
+		if(diffuseCoefficient > 0.0)
+			specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, normal))), materialSpecExponent);
+		specular = specularCoefficient * specularColor * lightColor;
+	}
 	//color = vec4(normalize(fs_position), 1.0);
 	color = vec4(ambient + diffuse + specular, surfaceColor.a);
 	if(isPlate == 1)

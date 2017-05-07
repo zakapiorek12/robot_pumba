@@ -26,7 +26,7 @@ namespace robot
             return mesh;
         }
 
-        public Mesh GetDoubleSidedRectangleMesh(float width, float height, Vector4 surfaceColor)
+        public Mesh GetRectangleMesh(float width, float height, Vector4 surfaceColor)
         {
             Vector3[] vertices = new Vector3[]
             {
@@ -40,19 +40,11 @@ namespace robot
             {
                 //front face
                 new Normalized() {normal = faceNormal, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
-                new Normalized() {normal = faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
-                new Normalized() {normal = faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)},
-                new Normalized() {normal = faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)},
-                new Normalized() {normal = faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
-                new Normalized() {normal = faceNormal, vertex = vertices[3], texturePos = new Vector2(1.0f, 1.0f)},
-
-                //back face
-                new Normalized() {normal = -faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)},
-                new Normalized() {normal = -faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
-                new Normalized() {normal = -faceNormal, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
-                new Normalized() {normal = -faceNormal, vertex = vertices[3], texturePos = new Vector2(1.0f, 1.0f)},
-                new Normalized() {normal = -faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
-                new Normalized() {normal = -faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)}
+                new Normalized() {normal = faceNormal, vertex = vertices[2], texturePos = new Vector2(0.0f, 1.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[1], texturePos = new Vector2(1.0f, 0.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[1], texturePos = new Vector2(1.0f, 0.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[2], texturePos = new Vector2(0.0f, 1.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[3], texturePos = new Vector2(1.0f, 1.0f)}
             };
             uint[] indices = new uint[normalized.Length];
             for (uint i = 0; i < indices.Length; i++)
