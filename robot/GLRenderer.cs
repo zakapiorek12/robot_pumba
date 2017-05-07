@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
+using System.Reflection;
+using System.Drawing.Imaging;
 
 namespace robot
 {
@@ -36,6 +38,9 @@ namespace robot
         MeshLoader meshLoader = new MeshLoader();
         private Robot robot;
 
+        private Bitmap texture;
+        private int textureID;
+
         public GLRenderer(int viewPortWidth, int viewportHeight)
         {
             meshesToDraw = new List<Mesh>[Enum.GetValues(typeof(MyShaderType)).Length];
@@ -43,6 +48,7 @@ namespace robot
                 meshesToDraw[i] = new List<Mesh>();
 
             LoadShaders();
+            LoadTexture();
             CreateProjectionMatrix(viewPortWidth, viewportHeight);
             CreateScene();
 
@@ -79,6 +85,7 @@ namespace robot
         private void CreateScene()
         {
             rectangle = meshLoader.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
+            rectangle.isPlate = 1;
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
                                      Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
                                      Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
@@ -92,13 +99,36 @@ namespace robot
 
             float floorYOffset = -1.0f;
             Mesh floor = meshLoader.GetDoubleSidedRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
-            floor.ModelMatrix = Matrix4.CreateRotationX((float) (Math.PI/2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
+            floor.ModelMatrix = Matrix4.CreateRotationX((float)(Math.PI / 2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
             GLRenderer.AddMeshToDraw(floor, MyShaderType.PHONG_LIGHT);
 
             Mesh cylinder = meshLoader.GetCylinderMesh(0.5f, 2.5f, new Vector4(0, 0, 1, 1), 40);
-            cylinder.ModelMatrix = Matrix4.CreateRotationX((float) (Math.PI/2.0f))*
+            cylinder.ModelMatrix = Matrix4.CreateRotationX((float)(Math.PI / 2.0f)) *
                                    Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f);
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
+        }
+
+        private void LoadTexture()
+        {
+            texture = new Bitmap(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "texture.jpg"));
+
+            GL.GenTextures(1, out textureID);
+            GL.BindTexture(TextureTarget.Texture2D, textureID);
+
+            BitmapData data = texture.LockBits(new System.Drawing.Rectangle(0, 0, texture.Width, texture.Height),
+                ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, data.Width, data.Height, 0,
+                OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, data.Scan0);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+
+            texture.UnlockBits(data);
         }
 
         public void DoScene(float deltaTime, Camera camera)
@@ -119,8 +149,10 @@ namespace robot
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
             GL.Enable(EnableCap.DepthTest);
 
-            GL.Enable(EnableCap.Blend);
+            GL.Enable(EnableCap.Texture2D);
+            GL.BindTexture(TextureTarget.Texture2D, textureID);
 
+            GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
 
             BindCameraAndProjectionToShaders(camera, activeShader);
@@ -362,6 +394,7 @@ namespace robot
             GL.Uniform1(shader.GetUniform("materialSpecExponent"), m.materialSpecExponent);
             GL.Uniform3(shader.GetUniform("specularColor"), m.materialDiffuseSpecularColor);
             GL.Uniform4(shader.GetUniform("surfaceColor"), m.surfaceColor);
+            GL.Uniform1(shader.GetUniform("isPlate"), m.isPlate);
         }
 
         public static void AddMeshToDraw(Mesh m, MyShaderType shaderType)

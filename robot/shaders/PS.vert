@@ -14,8 +14,12 @@ uniform vec4 surfaceColor;
 uniform float materialSpecExponent;
 uniform vec3 specularColor;
 
+uniform int isPlate;
+uniform sampler2D tex;
+
 in vec3 fs_position;
 in vec3 fs_normal;
+in vec2 fs_texturePos;
 
 out vec4 color;
 
@@ -39,5 +43,7 @@ void main(){
     vec3 specular = specularCoefficient * specularColor * lightColor;
 
 	//color = vec4(normalize(fs_position), 1.0);
-    color = vec4(ambient + diffuse + specular, 1.0f);
+	color = vec4(ambient + diffuse + specular, 1.0f);
+	if(isPlate == 1)
+		color *= texture(tex, fs_texturePos);
 }

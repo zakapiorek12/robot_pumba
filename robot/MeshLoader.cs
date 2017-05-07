@@ -39,20 +39,20 @@ namespace robot
             Normalized[] normalized = new Normalized[]
             {
                 //front face
-                new Normalized() {normal = faceNormal, vertex = vertices[0]},
-                new Normalized() {normal = faceNormal, vertex = vertices[1]},
-                new Normalized() {normal = faceNormal, vertex = vertices[2]},
-                new Normalized() {normal = faceNormal, vertex = vertices[2]},
-                new Normalized() {normal = faceNormal, vertex = vertices[1]},
-                new Normalized() {normal = faceNormal, vertex = vertices[3]},
+                new Normalized() {normal = faceNormal, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
+                new Normalized() {normal = faceNormal, vertex = vertices[3], texturePos = new Vector2(1.0f, 1.0f)},
 
                 //back face
-                new Normalized() {normal = -faceNormal, vertex = vertices[2]},
-                new Normalized() {normal = -faceNormal, vertex = vertices[1]},
-                new Normalized() {normal = -faceNormal, vertex = vertices[0]},
-                new Normalized() {normal = -faceNormal, vertex = vertices[3]},
-                new Normalized() {normal = -faceNormal, vertex = vertices[1]},
-                new Normalized() {normal = -faceNormal, vertex = vertices[2]}
+                new Normalized() {normal = -faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)},
+                new Normalized() {normal = -faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
+                new Normalized() {normal = -faceNormal, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
+                new Normalized() {normal = -faceNormal, vertex = vertices[3], texturePos = new Vector2(1.0f, 1.0f)},
+                new Normalized() {normal = -faceNormal, vertex = vertices[1], texturePos = new Vector2(0.0f, 1.0f)},
+                new Normalized() {normal = -faceNormal, vertex = vertices[2], texturePos = new Vector2(1.0f, 0.0f)}
             };
             uint[] indices = new uint[normalized.Length];
             for (uint i = 0; i < indices.Length; i++)
