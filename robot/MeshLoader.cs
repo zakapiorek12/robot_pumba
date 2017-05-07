@@ -64,6 +64,25 @@ namespace robot
             return m;
         }
 
+        public Mesh GetShadowQuadMesh(Vector3 vert1, Vector3 vert2, Vector3 vert3, Vector3 vert4)
+        {
+            Vector3[] vertices = new Vector3[]
+            {
+                vert1, vert2, vert3, vert4
+            };
+            Vector3 faceNormal = Vector3.UnitZ; //not used for shadow quads
+            Normalized[] normalized = new Normalized[4];
+            for (int i = 0; i < 4; i++)
+                normalized[i] = new Normalized() {normal = faceNormal, vertex = vertices[i]};
+            uint[] indices = new uint[]
+            {
+                0, 1, 2, 2, 1, 3
+            };
+
+            Mesh m = new Mesh(vertices, normalized, indices, null);
+            return m;
+        }
+
         public Mesh GetCylinderMesh(float radius, float height, Vector4 surfaceColor, int divisions)
         {
             List<Vector3> verticesList = new List<Vector3>();
@@ -152,6 +171,7 @@ namespace robot
             List<Vector3> vertexes = new List<Vector3>();
             List<Normalized> normalized = new List<Normalized>();
             List<uint> indexes = new List<uint>();
+            List<Triangle> triangles = new List<Triangle>();
             List<Neighbour> neighbours = new List<Neighbour>();
 
             NumberFormatInfo nfi = new NumberFormatInfo();
@@ -195,11 +215,16 @@ namespace robot
                 {
                     line = streamReader.ReadLine();
                     string[] abc = line.Split(' ');
-                    for (int j = 0; j < 3; j++)
+                    Triangle tri = new Triangle()
                     {
-                        uint a = uint.Parse(abc[j]);
-                        indexes.Add(a);
-                    }
+                        firstVertex = uint.Parse(abc[0]),
+                        secondVertex = uint.Parse(abc[1]),
+                        thirdVertex = uint.Parse(abc[2])
+                    };
+                    triangles.Add(tri);
+                    indexes.Add(tri.firstVertex);
+                    indexes.Add(tri.secondVertex);
+                    indexes.Add(tri.thirdVertex);
                 }
 
                 line = streamReader.ReadLine();
@@ -223,7 +248,7 @@ namespace robot
                 }
             }
 
-            return new Mesh(vertexes.ToArray(), normalized.ToArray(), indexes.ToArray(), neighbours.ToArray());
+            return new Mesh(vertexes.ToArray(), normalized.ToArray(), indexes.ToArray(), neighbours.ToArray(), triangles.ToArray());
         }
     }
 }

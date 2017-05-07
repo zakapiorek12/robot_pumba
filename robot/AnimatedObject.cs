@@ -9,10 +9,10 @@
             meshes = ProvideObjectMeshes();
         }
 
-        public void AddOnScene()
+        public void AddOnScene(GLRenderer.MyShaderType shaderType)
         {
             foreach(var m in meshes)
-                GLRenderer.AddMeshToDraw(m);
+                GLRenderer.AddMeshToDraw(m, shaderType);
             GLRenderer.AddAnimatedObject(this);
         }
 

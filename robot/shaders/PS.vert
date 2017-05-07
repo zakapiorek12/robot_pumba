@@ -20,6 +20,7 @@ in vec3 fs_normal;
 out vec4 color;
 
 void main(){
+	vec3 normal = (object_matrix * vec4(fs_normal, 0.0)).xyz;
 	vec3 surfaceToLight = normalize(lightPosition - fs_position);
 	vec3 surfaceToCamera = normalize((cameraModel_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz - fs_position);
 
@@ -27,13 +28,13 @@ void main(){
     vec3 ambient = ambientCoefficient * lightColor * surfaceColor.xyz;
 
     //diffuse
-    float diffuseCoefficient = max(0.0, dot(fs_normal, surfaceToLight));
+    float diffuseCoefficient = max(0.0, dot(normal, surfaceToLight));
     vec3 diffuse = diffuseCoefficient * specularColor * lightColor;
     
     //specular
     float specularCoefficient = 0.0;
     if(diffuseCoefficient > 0.0)
-        specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, fs_normal))), materialSpecExponent);
+        specularCoefficient = pow(max(0.0, dot(surfaceToCamera, reflect(-surfaceToLight, normal))), materialSpecExponent);
     vec3 specular = specularCoefficient * specularColor * lightColor;
 
 	//color = vec4(normalize(fs_position), 1.0);
