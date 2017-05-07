@@ -127,10 +127,10 @@ namespace robot
 
             BindCameraAndProjectionToShaders(camera, activeShader);
             BindLightDataToShaders(activeShader);
-
-            //RenderShadows();
+            
             Stencil(activeShader);
-            foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
+            //RenderShadows(activeShader);
+            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
                 DrawMesh(m, activeShader);
 
             GL.Flush();
@@ -145,7 +145,7 @@ namespace robot
             GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
         }
 
-        private void RenderShadows()
+        private void RenderShadows(ShaderProgram shader)
         {
             int shadowFacesInd = 0;
             int contourEdgeInd = 0;
@@ -207,8 +207,8 @@ namespace robot
             }
             //I sposob
             //GL.ColorMask(false, false, false, false);
-            //foreach (Mesh m in meshesToDraw)
-            //    DrawMesh(m);
+            //foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
+            //    DrawMesh(m, shader);
             //GL.Enable(EnableCap.CullFace);
             //GL.Enable(EnableCap.StencilTest);
             //GL.DepthMask(false);
@@ -216,11 +216,11 @@ namespace robot
             //GL.CullFace(CullFaceMode.Back);
             //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Incr);
             //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i]);
+            //    DrawMesh(shadowFaces[i], shader);
             //GL.CullFace(CullFaceMode.Front);
             //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Decr);
             //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i]);
+            //    DrawMesh(shadowFaces[i], shader);
 
             //GL.DepthMask(true);
             //GL.ColorMask(true, true, true, true);
@@ -229,12 +229,12 @@ namespace robot
             //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
             //GL.StencilFunc(StencilFunction.Greater, 0, ~0);
             //GL.Disable(EnableCap.Light0);
-            //foreach (Mesh m in meshesToDraw)
-            //    DrawMesh(m);
+            //foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
+            //    DrawMesh(m, shader);
             //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
             //GL.Enable(EnableCap.Light0);
-            //foreach (Mesh m in meshesToDraw)
-            //    DrawMesh(m);
+            //foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
+            //    DrawMesh(m, shader);
             //GL.Disable(EnableCap.StencilTest);
 
             //GL.ColorMask(false, false, false, false);
@@ -245,7 +245,7 @@ namespace robot
             //GL.StencilOpSeparate(StencilFace.Back, StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
             //GL.StencilFuncSeparate(StencilFace.FrontAndBack, StencilFunction.Always, 0, ~0);
             //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i]);
+            //    DrawMesh(shadowFaces[i], shader);
 
             //II sposob
             //GL.DepthMask(true);
@@ -284,10 +284,10 @@ namespace robot
             //foreach (Mesh m in meshesToDraw)
             //    DrawMesh(m);
 
-            //GL.ColorMask(true, true, true, true);
-            //GL.Disable(EnableCap.StencilTest);
-            //GL.Disable(EnableCap.CullFace);
-            //GL.DepthMask(true);
+            GL.ColorMask(true, true, true, true);
+            GL.Disable(EnableCap.StencilTest);
+            GL.Disable(EnableCap.CullFace);
+            GL.DepthMask(true);
         }
 
         private void Stencil(ShaderProgram shader)
