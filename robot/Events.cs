@@ -58,7 +58,7 @@ namespace robot
             if (mousePosition != null &&
                 mouseButtonDown != null)
             {
-                Point move = new Point(-(e.Position.X - mousePosition.X), -(e.Position.Y - mousePosition.Y));
+                Point move = new Point((e.Position.X - mousePosition.X), (e.Position.Y - mousePosition.Y));
                 camera.Rotate(move);
             }
             mousePosition = e.Position;

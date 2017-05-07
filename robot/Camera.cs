@@ -7,49 +7,55 @@ namespace robot
 {
     public class Camera
     {
-        public Matrix4 Move, Rotation, ResultMatrix;
+        public Matrix4 ResultMatrix = Matrix4.Identity;
+        Vector3 cameraPosition = new Vector3();
         float cameraDistMove = .05f;
         float cameraWheelMove = .5f;
         float cameraRotate = .005f;
         float latitude = 0, longitude = 0;
 
+        private Vector3 forwardDir, upDir, rightDir;
+
         public Camera() : base()
         {
-            Move = Matrix4.CreateTranslation(0, 0, -3);
-            Rotation = Matrix4.CreateRotationY(-30 * (float)Math.PI / 360);
+            cameraPosition = new Vector3(0, 0, 3);
+            Rotate(new Point(0, 0));
             CalculateResultMartix();
         }
 
         private void CalculateResultMartix()
         {
-            ResultMatrix = Move * Rotation;
+            ResultMatrix = Matrix4.CreateTranslation(-cameraPosition) *
+                Matrix4.CreateRotationY(longitude) *
+                Matrix4.CreateRotationX(latitude);
         }
 
         public void MoveCamera(MoveEnum move)
         {
-            Move *= Rotation;
+            float x = 0, y = 0, z = 0;
             switch (move)
             {
                 case MoveEnum.Left:
-                    Move[3, 0] += cameraDistMove;
+                    x -= cameraDistMove;
                     break;
                 case MoveEnum.Right:
-                    Move[3, 0] -= cameraDistMove;
+                    x += cameraDistMove;
                     break;
                 case MoveEnum.Up:
-                    Move[3, 1] -= cameraDistMove;
+                    y += cameraDistMove;
                     break;
                 case MoveEnum.Down:
-                    Move[3, 1] += cameraDistMove;
+                    y -= cameraDistMove;
                     break;
                 case MoveEnum.Backward:
-                    Move[3, 2] -= cameraWheelMove;
+                    z += cameraWheelMove;
                     break;
                 case MoveEnum.Forward:
-                    Move[3, 2] += cameraWheelMove;
+                    z -= cameraWheelMove;
                     break;
             }
-            Move *= Rotation.Inverted();
+            Vector3 movement = x*rightDir + y*upDir + z*forwardDir;
+            cameraPosition += movement;
             CalculateResultMartix();
         }
 
@@ -57,7 +63,6 @@ namespace robot
         {
             float xAngle = move.X * cameraRotate;
             longitude += xAngle;
-            Rotation *= GetYRotationMatrix(xAngle);
 
             float yAngle = move.Y * cameraRotate;
             float newLatitude = latitude + yAngle;
@@ -65,39 +70,26 @@ namespace robot
                 newLatitude < Math.PI / 2)
             {
                 latitude = newLatitude;
-                Rotation *= GetXRotationMatrix(yAngle);
             }
 
             CalculateResultMartix();
+
+            var pitchOri = Quaternion.FromAxisAngle(Vector3.UnitY, -longitude);
+            var yawOri = Quaternion.FromAxisAngle(Vector3.UnitX, -latitude);
+            this.Orient(pitchOri * yawOri);
         }
 
-
-        private Matrix4 GetYRotationMatrix(float angle)
+        public void Orient(Quaternion orientation)
         {
-            float sin = (float)Math.Sin(angle);
-            float cos = (float)Math.Sqrt(1 - sin * sin);
-
-            Matrix4 thisRotation = new OpenTK.Matrix4(
-                cos, 0, sin, 0,
-                0, 1, 0, 0,
-                -sin, 0, cos, 0,
-                0, 0, 0, 1);
-
-            return thisRotation;
+            Matrix4 newOrientation = Matrix4.CreateFromQuaternion(orientation);
+            Orient(newOrientation);
         }
 
-        private Matrix4 GetXRotationMatrix(float angle)
+        public void Orient(Matrix4 newOrientation)
         {
-            float sin = (float)Math.Sin(angle);
-            float cos = (float)Math.Sqrt(1 - sin * sin);
-
-            Matrix4 thisRotation = new OpenTK.Matrix4(
-                1, 0, 0, 0,
-                0, cos, -sin, 0,
-                0, sin, cos, 0,
-                0, 0, 0, 1);
-
-            return thisRotation;
+            this.forwardDir = new Vector3(newOrientation.M31, newOrientation.M32, newOrientation.M33);
+            this.upDir = new Vector3(newOrientation.M21, newOrientation.M22, newOrientation.M23);
+            this.rightDir = Vector3.Cross(this.upDir, this.forwardDir).Normalized();
         }
     }
 }

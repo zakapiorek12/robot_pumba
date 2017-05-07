@@ -68,8 +68,8 @@ namespace robot
 
         public void CreateProjectionMatrix(int viewportWidth, int viewportHeight)
         {
-            float far = (float)25.0f;
-            float near = (float)0.01f;
+            float far = (float)20f;
+            float near = (float)0.1f;
             float fov = (float)(90f / 180f * Math.PI);
             float e = (float)(1f / Math.Tan(fov / 2f));
             float a = (float)viewportHeight / (float)viewportWidth;
@@ -84,7 +84,7 @@ namespace robot
 
         private void CreateScene()
         {
-            rectangle = meshLoader.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.4f, 0.4f, 1.0f, 0.5f));
+            rectangle = meshLoader.GetRectangleMesh(1.5f, 1.0f, new Vector4(0.4f, 0.4f, 1.0f, 0.5f));
             rectangle.isPlate = 1;
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
                                      Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
@@ -100,8 +100,8 @@ namespace robot
             robot.AddOnScene(MyShaderType.PHONG_LIGHT);
 
             float floorYOffset = -1.0f;
-            Mesh floor = meshLoader.GetDoubleSidedRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
-            floor.ModelMatrix = Matrix4.CreateRotationX((float)(Math.PI / 2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
+            Mesh floor = meshLoader.GetRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
+            floor.ModelMatrix = Matrix4.CreateRotationX((float)(-Math.PI / 2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
             GLRenderer.AddMeshToDraw(floor, MyShaderType.PHONG_LIGHT);
 
             Mesh cylinder = meshLoader.GetCylinderMesh(0.5f, 2.5f, new Vector4(0, 0, 1, 1), 40);
@@ -161,9 +161,9 @@ namespace robot
             BindLightDataToShaders(activeShader);
             
             Stencil(activeShader);
-            //RenderShadows(activeShader);
-            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
-                DrawMesh(m, activeShader);
+            RenderShadows(activeShader);
+            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
+            //    DrawMesh(m, activeShader);
 
             GL.Flush();
         }
@@ -280,46 +280,40 @@ namespace robot
             //    DrawMesh(shadowFaces[i], shader);
 
             //II sposob
-            //GL.DepthMask(true);
-            //GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
-            //GL.Disable(EnableCap.StencilTest);
+            GL.DepthMask(true);
+            GL.ColorMask(true, true, true, true);
+            GL.StencilMask(~0);
+            GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
+            GL.Disable(EnableCap.StencilTest);
+            
+            GL.Uniform1(shader.GetUniform("drawUnlitScene"), 1);
+            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
+                DrawMesh(m, shader);
+            
+            GL.DepthMask(false);
+            GL.ColorMask(false, false, false, false);
+            GL.Enable(EnableCap.StencilTest);
+            GL.StencilFunc(StencilFunction.Always, 1, ~0);
+            GL.StencilOpSeparate(StencilFace.Front, StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
+            GL.StencilOpSeparate(StencilFace.Back, StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
+            for (int i = 0; i < shadowFacesInd; i++)
+                DrawMesh(shadowFaces[i], shader);
 
-            //GL.ColorMask(false, false, false, false);
-            //foreach (Mesh m in meshesToDraw)
-            //    DrawMesh(m);
-
-            //GL.DepthMask(false);
-
-            //GL.Enable(EnableCap.CullFace);
-            //GL.Enable(EnableCap.StencilTest);
-            //GL.StencilFunc(StencilFunction.Always, 0, ~0);
-            //GL.CullFace(CullFaceMode.Back);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Incr);
-            //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i]);
-            //GL.CullFace(CullFaceMode.Front);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Decr);
-            //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i]);
+            GL.DepthMask(true);
+            GL.Clear(ClearBufferMask.DepthBufferBit);
+            GL.StencilMask(0);
+            GL.StencilFunc(StencilFunction.Equal, 0, ~0);
+            GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
+            GL.ColorMask(true, true, true, true);
+            GL.Uniform1(shader.GetUniform("drawUnlitScene"), 0);
+            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
+                DrawMesh(m, shader);
+            
 
             //GL.ColorMask(true, true, true, true);
+            //GL.Disable(EnableCap.StencilTest);
+            //GL.Disable(EnableCap.CullFace);
             //GL.DepthMask(true);
-            //GL.Clear(ClearBufferMask.DepthBufferBit);
-            //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
-            //foreach (Mesh m in meshesToDraw)
-            //    DrawMesh(m);
-
-            //III sposob
-            //GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit | ClearBufferMask.ColorBufferBit);
-            //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i]);
-            //foreach (Mesh m in meshesToDraw)
-            //    DrawMesh(m);
-
-            GL.ColorMask(true, true, true, true);
-            GL.Disable(EnableCap.StencilTest);
-            GL.Disable(EnableCap.CullFace);
-            GL.DepthMask(true);
         }
 
         private void Stencil(ShaderProgram shader)
