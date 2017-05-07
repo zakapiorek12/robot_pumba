@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
 
@@ -11,111 +12,52 @@ namespace robot
     {
         private Matrix4 projectionMatrix;
 
-        private int programId;
-        private int vertexShader;
-        private int pixelShader;
-
-        private int projectionMatrixLocation;
-        private int cameraviewMatrixLocation;
-        private int objectMatrixLocation;
-        private int cameraModelMatrixLocation;
-
-        private int ambientCoefficientLocation;
-        private int lightPositionLocation;
-        private int lightColorLocation;
-
-        private int surfaceColorLocation;
-        private int materialSpecExponentLocation;
-        private int specularColorLocation;
-
-        private int isRectangle;
+        public enum MyShaderType
+        {
+            PHONG_LIGHT,
+            PLATE
+        }
+        private Dictionary<MyShaderType, ShaderProgram> shaders = new Dictionary<MyShaderType, ShaderProgram>();
 
         private float ambientCoefficient = 1.0f;
         private Vector3 lightColor = new Vector3(0.9f, 0.8f, 0.8f);
         private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 1.0f);
 
-        private static List<Mesh> meshesToDraw = new List<Mesh>();
+        private static List<Mesh>[] meshesToDraw;
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
         private bool previous;
         private Mesh rectangle;
         private Reflection reflection;
 
+        private static readonly int maximumContourEdges = 10000;
+        Edge[] contourEdges = new Edge[maximumContourEdges];
+        Mesh[] shadowFaces = new Mesh[maximumContourEdges];
+
+        MeshLoader meshLoader = new MeshLoader();
+        private Robot robot;
+
         public GLRenderer(int viewPortWidth, int viewportHeight)
         {
-            LoadShaders("");
+            meshesToDraw = new List<Mesh>[Enum.GetValues(typeof(MyShaderType)).Length];
+            for (int i = 0; i < meshesToDraw.Length; i++)
+                meshesToDraw[i] = new List<Mesh>();
+
+            LoadShaders();
             CreateProjectionMatrix(viewPortWidth, viewportHeight);
             CreateScene();
+
+            GL.ClearColor(Color.Black);
         }
 
-        private void LoadShaders(string name)
+        private void LoadShaders()
         {
-            GL.DeleteProgram(programId);
-            programId = GL.CreateProgram();
+            ShaderProgram shaderProgram = new ShaderProgram("shaders/VS.vert",
+                "shaders/PS.vert", true);
+            shaders.Add(MyShaderType.PHONG_LIGHT, shaderProgram);
 
-            LoadShadersUsingName(name);
-
-            GL.LinkProgram(programId);
-            GL.UseProgram(programId);
-
-            projectionMatrixLocation = GL.GetUniformLocation(programId, "projection_matrix");
-            cameraviewMatrixLocation = GL.GetUniformLocation(programId, "cameraview_matrix");
-            cameraModelMatrixLocation = GL.GetUniformLocation(programId, "cameraModel_matrix");
-            objectMatrixLocation = GL.GetUniformLocation(programId, "object_matrix");
-
-            ambientCoefficientLocation = GL.GetUniformLocation(programId, "ambientCoefficient");
-            lightPositionLocation = GL.GetUniformLocation(programId, "lightPosition");
-            lightColorLocation = GL.GetUniformLocation(programId, "lightColor");
-
-            surfaceColorLocation = GL.GetUniformLocation(programId, "surfaceColor");
-            materialSpecExponentLocation = GL.GetUniformLocation(programId, "materialSpecExponent");
-            specularColorLocation = GL.GetUniformLocation(programId, "specularColor");
-
-            isRectangle = GL.GetUniformLocation(programId, "isRectangle");
-        }
-
-        private void LoadShadersUsingName(string name)
-        {
-            string root = RootFolder();
-
-            LoadVertexShader(root, name);
-            LoadPixelShader(root, name);
-        }
-
-        private string RootFolder()
-        {
-            string root = Directory.GetCurrentDirectory();
-            root += "\\shaders";
-            return root;
-        }
-
-        private void LoadVertexShader(string root, string name)
-        {
-            int statusCode;
-            string info;
-            vertexShader = GL.CreateShader(ShaderType.VertexShader);
-            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
-            string path = root + "\\VS" + name + ".vert";
-            GL.ShaderSource(vertexShader, File.ReadAllText(path));
-            GL.CompileShader(vertexShader);
-            info = GL.GetShaderInfoLog(vertexShader);
-            GL.GetShader(vertexShader, ShaderParameter.CompileStatus, out statusCode);
-            if (statusCode != 1) throw new ApplicationException(info);
-            GL.AttachShader(programId, vertexShader);
-        }
-
-        private void LoadPixelShader(string root, string name)
-        {
-            int statusCode;
-            string info;
-            pixelShader = GL.CreateShader(ShaderType.FragmentShader);
-            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
-            string path = root + "\\PS" + name + ".vert";
-            GL.ShaderSource(pixelShader, File.ReadAllText(path));
-            GL.CompileShader(pixelShader);
-            info = GL.GetShaderInfoLog(pixelShader);
-            GL.GetShader(pixelShader, ShaderParameter.CompileStatus, out statusCode);
-            if (statusCode != 1) throw new ApplicationException(info);
-            GL.AttachShader(programId, pixelShader);
+            shaderProgram = new ShaderProgram("shaders/VS_Plate.vert",
+                "shaders/PS_Plate.vert", true);
+            shaders.Add(MyShaderType.PLATE, shaderProgram);
         }
 
         public void CreateProjectionMatrix(int viewportWidth, int viewportHeight)
@@ -136,28 +78,27 @@ namespace robot
 
         private void CreateScene()
         {
-            MeshLoader ml = new MeshLoader();
-            rectangle = ml.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
+            rectangle = meshLoader.GetDoubleSidedRectangleMesh(1.5f, 1.0f, new Vector4(0.8f, 1.0f, 1.0f, 0.5f));
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
                                      Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
                                      Matrix4.CreateTranslation(-1.5f, 0.0f, 0.0f);
             rectangle.CalculateInverted();
-            Robot robot = new Robot(rectangle);
+            robot = new Robot(rectangle);
 
             reflection = new Reflection(robot, rectangle);
-            reflection.AddOnScene();
-            AddMeshToDraw(rectangle);
-            robot.AddOnScene();
+            reflection.AddOnScene(MyShaderType.PHONG_LIGHT);
+            AddMeshToDraw(rectangle, MyShaderType.PHONG_LIGHT);
+            robot.AddOnScene(MyShaderType.PHONG_LIGHT);
 
             float floorYOffset = -1.0f;
-            Mesh floor = ml.GetDoubleSidedRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
+            Mesh floor = meshLoader.GetDoubleSidedRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
             floor.ModelMatrix = Matrix4.CreateRotationX((float) (Math.PI/2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
-            GLRenderer.AddMeshToDraw(floor);
+            GLRenderer.AddMeshToDraw(floor, MyShaderType.PHONG_LIGHT);
 
-            Mesh cylinder = ml.GetCylinderMesh(0.5f, 2.5f, new Vector4(0, 0, 1, 1), 360);
+            Mesh cylinder = meshLoader.GetCylinderMesh(0.5f, 2.5f, new Vector4(0, 0, 1, 1), 40);
             cylinder.ModelMatrix = Matrix4.CreateRotationX((float) (Math.PI/2.0f))*
                                    Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f);
-            AddMeshToDraw(cylinder);
+            AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
         }
 
         public void DoScene(float deltaTime, Camera camera)
@@ -165,57 +106,189 @@ namespace robot
             foreach (var anim in animatedObjects)
                 anim.DoAnimation(deltaTime);
 
-            Render(camera);
+            RenderWithPhongLightShader(camera);
+            
+            //tutaj dodac renderowanie przez nowe shadery
         }
 
-        private void Render(Camera camera)
+        private void RenderWithPhongLightShader(Camera camera)
         {
+            ShaderProgram activeShader = shaders[MyShaderType.PHONG_LIGHT];
+            GL.UseProgram(activeShader.ProgramID);
+
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
-            GL.ClearColor(Color.Black);
             GL.Enable(EnableCap.DepthTest);
 
             GL.Enable(EnableCap.Blend);
 
             GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
 
+            BindCameraAndProjectionToShaders(camera, activeShader);
+            BindLightDataToShaders(activeShader);
 
-            Stencil();
-            foreach (Mesh m in meshesToDraw)
-            {
-                if (previous != m.MainObject)
-                {
-                    if (previous = m.MainObject)
-                    {
-                        LoadShaders("");
-                        //GL.ClearDepth(1);
-                        //GL.DepthFunc(DepthFunction.Less);
-                        //GL.Clear(ClearBufferMask.DepthBufferBit);
-                    }
-                    else
-                    {
-                        LoadShaders("_Plate");
-                    }
-
-                    BindCameraAndProjectionToShaders(camera);
-                    BindLightDataToShaders();
-                }
-
-                DrawMesh(m);
-            }
+            //RenderShadows();
+            //Stencil(activeShader);
+            foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
+                DrawMesh(m, activeShader);
 
             GL.Flush();
         }
 
-        private void DrawMesh(Mesh m)
+        private void DrawMesh(Mesh m, ShaderProgram shader)
         {
             m.BindVAO();
-            BindMeshMaterialDataToShaders(m);
+            BindMeshMaterialDataToShaders(m, shader);
 
-            GL.UniformMatrix4(objectMatrixLocation, false, ref m.ModelMatrix);
+            GL.UniformMatrix4(shader.GetUniform("object_matrix"), false, ref m.ModelMatrix);
             GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
         }
 
-        private void Stencil()
+        private void RenderShadows()
+        {
+            int shadowFacesInd = 0;
+            int contourEdgeInd = 0;
+            foreach (Mesh m in robot.meshes)
+            {
+                Vector3 lightPos = (new Vector4(lightPosition, 1) * m.ModelMatrix.Inverted()).Xyz;
+                for(int i = 0; i < m.Neighbourhood.Length; i++)
+                {
+                    Triangle firstTri = m.TrianglesList[m.Neighbourhood[i].firstTriangle];
+                    Vector3 triangleCenter1 = (m.NormalizedVertexBuffer[firstTri.firstVertex].vertex +
+                        m.NormalizedVertexBuffer[firstTri.secondVertex].vertex +
+                        m.NormalizedVertexBuffer[firstTri.thirdVertex].vertex) / 3.0f;
+                    triangleCenter1 = (new Vector4(triangleCenter1, 1)*m.ModelMatrix).Xyz;
+                    Vector3 lightDir1 = triangleCenter1 - lightPos;
+                    Vector3 triangleNormal1 = m.NormalizedVertexBuffer[firstTri.firstVertex].normal;
+                    triangleNormal1 = (new Vector4(triangleNormal1, 0) *m.ModelMatrix).Xyz;
+
+                    Triangle secTri = m.TrianglesList[m.Neighbourhood[i].secondTriangle];
+                    Vector3 triangleCenter2 = (m.NormalizedVertexBuffer[secTri.firstVertex].vertex +
+                        m.NormalizedVertexBuffer[secTri.secondVertex].vertex +
+                        m.NormalizedVertexBuffer[secTri.thirdVertex].vertex) / 3.0f;
+                    triangleCenter2 = (new Vector4(triangleCenter2, 1) * m.ModelMatrix).Xyz;
+                    Vector3 lightDir2 = triangleCenter2 - lightPos;
+                    Vector3 triangleNormal2 = m.NormalizedVertexBuffer[secTri.firstVertex].normal;
+                    triangleNormal2 = (new Vector4(triangleNormal2, 0) * m.ModelMatrix).Xyz;
+
+                    if (Vector3.Dot(lightDir1, triangleNormal1)*Vector3.Dot(lightDir2, triangleNormal2) >= 0.0f)
+                    {
+                        contourEdges[contourEdgeInd] = new Edge(m.VertexBuffer[m.Neighbourhood[i].firstVertex],
+                            m.VertexBuffer[m.Neighbourhood[i].secondVertex]);
+                        contourEdges[contourEdgeInd].first = (new Vector4(contourEdges[contourEdgeInd].first, 1) * m.ModelMatrix).Xyz;
+                        contourEdges[contourEdgeInd].second = (new Vector4(contourEdges[contourEdgeInd].second, 1) * m.ModelMatrix).Xyz;
+                        contourEdgeInd++;
+                    }
+                }
+                
+                float extrusion = 1000.0f;
+                for(int i = 0; i < contourEdgeInd; i++)
+                {
+                    Edge e = contourEdges[i];
+                    Vector3 vert1 = e.first;
+                    Vector3 vert2 = e.second;
+                    Vector3 vert3 = e.second + extrusion * (e.second - lightPos);
+                    Vector3 vert4 = e.first + extrusion * (e.first - lightPos);
+                    if (shadowFaces[shadowFacesInd] != null)
+                    {
+                        shadowFaces[shadowFacesInd].VertexBuffer[0] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[0].vertex = vert1;
+                        shadowFaces[shadowFacesInd].VertexBuffer[1] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[1].vertex = vert2;
+                        shadowFaces[shadowFacesInd].VertexBuffer[2] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[2].vertex = vert3;
+                        shadowFaces[shadowFacesInd].VertexBuffer[3] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[3].vertex = vert4;
+                        shadowFaces[shadowFacesInd].FillVbos();
+                    }
+                    else
+                        shadowFaces[shadowFacesInd] = meshLoader.GetShadowQuadMesh(vert1, vert2, vert3, vert4);
+                    shadowFacesInd++;
+                }
+
+                contourEdgeInd = 0;
+            }
+            //I sposob
+            //GL.ColorMask(false, false, false, false);
+            //foreach (Mesh m in meshesToDraw)
+            //    DrawMesh(m);
+            //GL.Enable(EnableCap.CullFace);
+            //GL.Enable(EnableCap.StencilTest);
+            //GL.DepthMask(false);
+            //GL.StencilFunc(StencilFunction.Always, 0, ~0);
+            //GL.CullFace(CullFaceMode.Back);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Incr);
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i]);
+            //GL.CullFace(CullFaceMode.Front);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Decr);
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i]);
+
+            //GL.DepthMask(true);
+            //GL.ColorMask(true, true, true, true);
+            //GL.CullFace(CullFaceMode.Back);
+            //GL.DepthFunc(DepthFunction.Lequal);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
+            //GL.StencilFunc(StencilFunction.Greater, 0, ~0);
+            //GL.Disable(EnableCap.Light0);
+            //foreach (Mesh m in meshesToDraw)
+            //    DrawMesh(m);
+            //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
+            //GL.Enable(EnableCap.Light0);
+            //foreach (Mesh m in meshesToDraw)
+            //    DrawMesh(m);
+            //GL.Disable(EnableCap.StencilTest);
+
+            //GL.ColorMask(false, false, false, false);
+            //GL.Disable(EnableCap.CullFace);
+            //GL.Enable(EnableCap.StencilTest);
+            //GL.DepthMask(false);
+            //GL.StencilOpSeparate(StencilFace.Front, StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
+            //GL.StencilOpSeparate(StencilFace.Back, StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
+            //GL.StencilFuncSeparate(StencilFace.FrontAndBack, StencilFunction.Always, 0, ~0);
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i]);
+
+            //II sposob
+            //GL.DepthMask(true);
+            //GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
+            //GL.Disable(EnableCap.StencilTest);
+
+            //GL.ColorMask(false, false, false, false);
+            //foreach (Mesh m in meshesToDraw)
+            //    DrawMesh(m);
+
+            //GL.DepthMask(false);
+
+            //GL.Enable(EnableCap.CullFace);
+            //GL.Enable(EnableCap.StencilTest);
+            //GL.StencilFunc(StencilFunction.Always, 0, ~0);
+            //GL.CullFace(CullFaceMode.Back);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Incr);
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i]);
+            //GL.CullFace(CullFaceMode.Front);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Decr);
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i]);
+
+            //GL.ColorMask(true, true, true, true);
+            //GL.DepthMask(true);
+            //GL.Clear(ClearBufferMask.DepthBufferBit);
+            //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
+            //foreach (Mesh m in meshesToDraw)
+            //    DrawMesh(m);
+
+            //III sposob
+            //GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit | ClearBufferMask.ColorBufferBit);
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i]);
+            //foreach (Mesh m in meshesToDraw)
+            //    DrawMesh(m);
+
+            //GL.ColorMask(true, true, true, true);
+            //GL.Disable(EnableCap.StencilTest);
+            //GL.Disable(EnableCap.CullFace);
+            //GL.DepthMask(true);
+        }
+
+        private void Stencil(ShaderProgram shader)
         {
             //GL.Enable(EnableCap.StencilTest);
             ////GL.ClearStencil(0);
@@ -267,33 +340,33 @@ namespace robot
             //GL.DepthFunc(DepthFunction.Greater);
 
             //////////
-            DrawMesh(rectangle);
+            DrawMesh(rectangle, shader);
         }
 
-        private void BindCameraAndProjectionToShaders(Camera camera)
+        private void BindCameraAndProjectionToShaders(Camera camera, ShaderProgram shader)
         {
-            GL.UniformMatrix4(cameraviewMatrixLocation, false, ref camera.ResultMatrix);
+            GL.UniformMatrix4(shader.GetUniform("cameraview_matrix"), false, ref camera.ResultMatrix);
             Matrix4 cameraModelMatrix = camera.ResultMatrix.Inverted();
-            GL.UniformMatrix4(cameraModelMatrixLocation, false, ref cameraModelMatrix);
-            GL.UniformMatrix4(projectionMatrixLocation, false, ref projectionMatrix);
+            GL.UniformMatrix4(shader.GetUniform("cameraModel_matrix"), false, ref cameraModelMatrix);
+            GL.UniformMatrix4(shader.GetUniform("projection_matrix"), false, ref projectionMatrix);
         }
-        private void BindLightDataToShaders()
+        private void BindLightDataToShaders(ShaderProgram shader)
         {
-            GL.Uniform3(lightColorLocation, lightColor);
-            GL.Uniform3(lightPositionLocation, lightPosition);
-            GL.Uniform1(ambientCoefficientLocation, ambientCoefficient);
-        }
-
-        private void BindMeshMaterialDataToShaders(Mesh m)
-        {
-            GL.Uniform1(materialSpecExponentLocation, m.materialSpecExponent);
-            GL.Uniform3(specularColorLocation, m.materialDiffuseSpecularColor);
-            GL.Uniform4(surfaceColorLocation, m.surfaceColor);
+            GL.Uniform3(shader.GetUniform("lightColor"), lightColor);
+            GL.Uniform3(shader.GetUniform("lightPosition"), lightPosition);
+            GL.Uniform1(shader.GetUniform("ambientCoefficient"), ambientCoefficient);
         }
 
-        public static void AddMeshToDraw(Mesh m)
+        private void BindMeshMaterialDataToShaders(Mesh m, ShaderProgram shader)
         {
-            meshesToDraw.Add(m);
+            GL.Uniform1(shader.GetUniform("materialSpecExponent"), m.materialSpecExponent);
+            GL.Uniform3(shader.GetUniform("specularColor"), m.materialDiffuseSpecularColor);
+            GL.Uniform4(shader.GetUniform("surfaceColor"), m.surfaceColor);
+        }
+
+        public static void AddMeshToDraw(Mesh m, MyShaderType shaderType)
+        {
+            meshesToDraw[(int) shaderType].Add(m);
         }
 
         public static void AddAnimatedObject(AnimatedObject animObj)
@@ -303,7 +376,8 @@ namespace robot
 
         public static void RemoveMeshToDraw(Mesh m)
         {
-            meshesToDraw.Remove(m);
+            for(int i = 0; i < (int) Enum.GetValues(typeof(MyShaderType)).Length; i++)
+                meshesToDraw[i].Remove(m);
         }
 
         public static void RemoveAnimatedObject(AnimatedObject animObj)
