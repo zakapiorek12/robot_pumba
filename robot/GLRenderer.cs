@@ -17,7 +17,8 @@ namespace robot
         public enum MyShaderType
         {
             PHONG_LIGHT,
-            PLATE
+            PLATE,
+            PARTICLES
         }
         private Dictionary<MyShaderType, ShaderProgram> shaders = new Dictionary<MyShaderType, ShaderProgram>();
 
@@ -27,7 +28,6 @@ namespace robot
 
         private static List<Mesh>[] meshesToDraw;
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
-        private bool previous;
         private Mesh rectangle;
         private Reflection reflection;
 
@@ -37,6 +37,7 @@ namespace robot
 
         MeshLoader meshLoader = new MeshLoader();
         private Robot robot;
+        //private Emitter emitter;
 
         private Bitmap texture;
         private int textureID;
@@ -64,6 +65,9 @@ namespace robot
             shaderProgram = new ShaderProgram("shaders/VS_Plate.vert",
                 "shaders/PS_Plate.vert", true);
             shaders.Add(MyShaderType.PLATE, shaderProgram);
+
+            shaderProgram = new ShaderProgram("shaders/VS_Particles.vert", "shaders/PS_Particles.vert", "shaders/GS_Particles.vert", true);
+            shaders.Add(MyShaderType.PARTICLES, shaderProgram);
         }
 
         public void CreateProjectionMatrix(int viewportWidth, int viewportHeight)
@@ -108,6 +112,8 @@ namespace robot
             cylinder.ModelMatrix = Matrix4.CreateRotationX((float)(Math.PI / 2.0f)) *
                                    Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f);
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
+
+            //emitter = new Emitter(robot, MyShaderType.PARTICLES);
         }
 
         private void LoadTexture()
