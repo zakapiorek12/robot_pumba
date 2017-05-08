@@ -6,7 +6,7 @@ namespace robot
     class Robot : AnimatedObject
     {
         private float circleRadius = 0.4f;
-        private float angularSpeed = (float) (60.0f * Math.PI / 180.0f); //rotations per sec (in radians)
+        private float angularSpeed = (float) (Math.PI); //rotations per sec (in radians)
         private float currentAngle;
 
         public Vector3 endPointPos, endPointNormal, endPointDirection;
