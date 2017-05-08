@@ -227,17 +227,24 @@ namespace robot
                     Vector3 triangleNormal2 = m.NormalizedVertexBuffer[secTri.firstVertex].normal;
                     triangleNormal2 = (new Vector4(triangleNormal2, 0) * m.ModelMatrix).Xyz;
 
-                    if (Vector3.Dot(lightDir1, triangleNormal1)*Vector3.Dot(lightDir2, triangleNormal2) >= 0.0f)
+                    float dot1 = Vector3.Dot(lightDir1, triangleNormal1);
+                    float dot2 = Vector3.Dot(lightDir2, triangleNormal2);
+                    if (dot1 * dot2 <= 0.0f)
                     {
+                        //tylny trojkat jako przednie denko chcemy
+                        uint triangleInd = dot1 >= 0
+                            ? m.Neighbourhood[i].firstTriangle
+                            : m.Neighbourhood[i].secondTriangle;
                         contourEdges[contourEdgeInd] = new Edge(m.VertexBuffer[m.Neighbourhood[i].firstVertex],
-                            m.VertexBuffer[m.Neighbourhood[i].secondVertex]);
+                            m.VertexBuffer[m.Neighbourhood[i].secondVertex], triangleInd);
                         contourEdges[contourEdgeInd].first = (new Vector4(contourEdges[contourEdgeInd].first, 1) * m.ModelMatrix).Xyz;
                         contourEdges[contourEdgeInd].second = (new Vector4(contourEdges[contourEdgeInd].second, 1) * m.ModelMatrix).Xyz;
                         contourEdgeInd++;
                     }
                 }
                 
-                float extrusion = 1000.0f;
+                float extrusion = 1000f;
+                Matrix4 backFaceRotationMat = Matrix4.CreateRotationY((float)- Math.PI);
                 for(int i = 0; i < contourEdgeInd; i++)
                 {
                     Edge e = contourEdges[i];
@@ -245,24 +252,61 @@ namespace robot
                     Vector3 vert2 = e.second;
                     Vector3 vert3 = e.second + extrusion * (e.second - lightPos);
                     Vector3 vert4 = e.first + extrusion * (e.first - lightPos);
-                    if (shadowFaces[shadowFacesInd] != null)
-                    {
-                        shadowFaces[shadowFacesInd].VertexBuffer[0] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[0].vertex = vert1;
-                        shadowFaces[shadowFacesInd].VertexBuffer[1] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[1].vertex = vert2;
-                        shadowFaces[shadowFacesInd].VertexBuffer[2] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[2].vertex = vert3;
-                        shadowFaces[shadowFacesInd].VertexBuffer[3] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[3].vertex = vert4;
-                        shadowFaces[shadowFacesInd].FillVbos();
-                    }
-                    else
-                        shadowFaces[shadowFacesInd] = meshLoader.GetShadowQuadMesh(vert1, vert2, vert3, vert4);
-                    shadowFacesInd++;
+
+                    AddNewShadowFace(ref shadowFacesInd, vert1, vert2, vert3, vert4);
+
+                    Triangle tri = m.TrianglesList[e.triangleInd];
+                    Vector3 triVert1 = m.NormalizedVertexBuffer[tri.firstVertex].vertex;
+                    triVert1 = (new Vector4(triVert1, 1) * m.ModelMatrix).Xyz;
+                    Vector3 triVert2 = m.NormalizedVertexBuffer[tri.secondVertex].vertex;
+                    triVert2 = (new Vector4(triVert2, 1) * m.ModelMatrix).Xyz;
+                    Vector3 triVert3 = m.NormalizedVertexBuffer[tri.thirdVertex].vertex;
+                    triVert3 = (new Vector4(triVert3, 1) * m.ModelMatrix).Xyz;
+
+                    AddNewShadowFace(ref shadowFacesInd, triVert1, triVert2, triVert3, triVert3);
+
+                    Vector4 center = new Vector4(triVert1 + triVert2 + triVert3, 0)/3.0f;
+                    triVert1 = (((new Vector4(triVert1, 1) - center) * backFaceRotationMat + center) * m.ModelMatrix).Xyz + extrusion * (triVert1 - lightPos);
+                    triVert2 = (((new Vector4(triVert2, 1) - center) * backFaceRotationMat + center) * m.ModelMatrix).Xyz + extrusion * (triVert2 - lightPos);
+                    triVert3 = (((new Vector4(triVert3, 1) - center) * backFaceRotationMat + center) * m.ModelMatrix).Xyz + extrusion * (triVert3 - lightPos);
+
+                    AddNewShadowFace(ref shadowFacesInd, triVert1, triVert2, triVert3, triVert3);
                 }
 
                 contourEdgeInd = 0;
             }
+            //shadowFacesInd = 0;
+            //Vector4 v1 = new Vector4(-1, -1, 0, 1);
+            //Vector4 v2 = new Vector4(1, -1, 0, 1);
+            //Vector4 v3 = new Vector4(-1, 1, 0, 1);
+            //Vector4 v4 = new Vector4(1, 1, 0, 1);
+            //Matrix4 mat = Matrix4.CreateRotationX((float)(-Math.PI / 4.0f));
+            //AddNewShadowFace(ref shadowFacesInd, (v1 * mat).Xyz, (v2 * mat).Xyz, (v3 * mat).Xyz, (v4 * mat).Xyz);
+
+            //mat = Matrix4.CreateRotationY((float)(-Math.PI)) * Matrix4.CreateTranslation(0, 0, -0.8f) * Matrix4.CreateRotationX((float)(-Math.PI / 4.0f));
+            //AddNewShadowFace(ref shadowFacesInd, (v1 * mat).Xyz, (v2 * mat).Xyz, (v3 * mat).Xyz, (v4 * mat).Xyz);
+
+            //mat = Matrix4.CreateRotationY((float)(-Math.PI / 2.0f)) * Matrix4.CreateTranslation(-0.5f, 0, -0.5f);
+            //AddNewShadowFace(ref shadowFacesInd, (v1 * mat).Xyz, (v2 * mat).Xyz, (v3 * mat).Xyz, (v4 * mat).Xyz);
+
+
+
             //I sposob
+            //GL.DepthMask(true);
+            //GL.ColorMask(true, true, true, true);
+            //GL.CullFace(CullFaceMode.Back);
+            //GL.DepthFunc(DepthFunction.Lequal);
+            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
+            //GL.StencilFunc(StencilFunction.Greater, 0, ~0);
+            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
+            //    DrawMesh(m, shader);
+            //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
+            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
+            //    DrawMesh(m, shader);
+            //GL.Disable(EnableCap.StencilTest);
+
             //GL.ColorMask(false, false, false, false);
-            //foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
+            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
             //    DrawMesh(m, shader);
             //GL.Enable(EnableCap.CullFace);
             //GL.Enable(EnableCap.StencilTest);
@@ -276,21 +320,6 @@ namespace robot
             //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Decr);
             //for (int i = 0; i < shadowFacesInd; i++)
             //    DrawMesh(shadowFaces[i], shader);
-
-            //GL.DepthMask(true);
-            //GL.ColorMask(true, true, true, true);
-            //GL.CullFace(CullFaceMode.Back);
-            //GL.DepthFunc(DepthFunction.Lequal);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
-            //GL.StencilFunc(StencilFunction.Greater, 0, ~0);
-            //GL.Disable(EnableCap.Light0);
-            //foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
-            //    DrawMesh(m, shader);
-            //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
-            //GL.Enable(EnableCap.Light0);
-            //foreach (Mesh m in meshesToDraw[(int) MyShaderType.PHONG_LIGHT])
-            //    DrawMesh(m, shader);
-            //GL.Disable(EnableCap.StencilTest);
 
             //GL.ColorMask(false, false, false, false);
             //GL.Disable(EnableCap.CullFace);
@@ -308,19 +337,25 @@ namespace robot
             GL.StencilMask(~0);
             GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
             GL.Disable(EnableCap.StencilTest);
-            
+
             GL.Uniform1(shader.GetUniform("drawUnlitScene"), 1);
             foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
                 DrawMesh(m, shader);
-            
+
+            GL.Enable(EnableCap.CullFace);
+            GL.Enable(EnableCap.StencilTest);
             GL.DepthMask(false);
             GL.ColorMask(false, false, false, false);
-            GL.Enable(EnableCap.StencilTest);
-            GL.StencilFunc(StencilFunction.Always, 1, ~0);
-            GL.StencilOpSeparate(StencilFace.Front, StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
-            GL.StencilOpSeparate(StencilFace.Back, StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
+            GL.StencilFunc(StencilFunction.Always, 0, ~0);
+            GL.CullFace(CullFaceMode.Back);
+            GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
             for (int i = 0; i < shadowFacesInd; i++)
                 DrawMesh(shadowFaces[i], shader);
+            GL.CullFace(CullFaceMode.Front);
+            GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
+            for (int i = 0; i < shadowFacesInd; i++)
+                DrawMesh(shadowFaces[i], shader);
+            GL.Disable(EnableCap.CullFace);
 
             GL.DepthMask(true);
             GL.Clear(ClearBufferMask.DepthBufferBit);
@@ -331,12 +366,21 @@ namespace robot
             GL.Uniform1(shader.GetUniform("drawUnlitScene"), 0);
             foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
                 DrawMesh(m, shader);
-            
+        }
 
-            //GL.ColorMask(true, true, true, true);
-            //GL.Disable(EnableCap.StencilTest);
-            //GL.Disable(EnableCap.CullFace);
-            //GL.DepthMask(true);
+        private void AddNewShadowFace(ref int shadowFacesInd, Vector3 vert1, Vector3 vert2, Vector3 vert3, Vector3 vert4)
+        {
+            if (shadowFaces[shadowFacesInd] != null)
+            {
+                shadowFaces[shadowFacesInd].VertexBuffer[0] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[0].vertex = vert1;
+                shadowFaces[shadowFacesInd].VertexBuffer[1] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[1].vertex = vert2;
+                shadowFaces[shadowFacesInd].VertexBuffer[2] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[2].vertex = vert3;
+                shadowFaces[shadowFacesInd].VertexBuffer[3] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[3].vertex = vert4;
+                shadowFaces[shadowFacesInd].FillVbos();
+            }
+            else
+                shadowFaces[shadowFacesInd] = meshLoader.GetShadowQuadMesh(vert1, vert2, vert3, vert4);
+            shadowFacesInd++;
         }
 
         private void Stencil(ShaderProgram shader)
