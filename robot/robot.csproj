@@ -58,7 +58,7 @@
     <Compile Include="MainWindow.cs" />
     <Compile Include="Mesh.cs" />
     <Compile Include="MeshLoader.cs" />
-    <Compile Include="ParticleSystem\Emitter.cs" />
+    <Compile Include="Emitter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Reflection.cs" />
