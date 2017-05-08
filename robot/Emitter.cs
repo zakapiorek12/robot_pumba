@@ -63,6 +63,7 @@ namespace robot
                 }
 
                 particlesMeshes[i].NormalizedVertexBuffer[0].vertex += p.velocity;//update position
+                particlesMeshes[i].ModelMatrix = Matrix4.CreateTranslation(particlesMeshes[i].NormalizedVertexBuffer[0].vertex);
                 particlesMeshes[i].NormalizedVertexBuffer[0].normal.X = p.old / MAX_OLD;//update transparency
                 p.velocity -= new Vector3(0.0f, 0.0001f, 0.0f);//gravity
 
@@ -86,12 +87,13 @@ namespace robot
             Vector3 particleVelocity = (r + robot.endPointDirection) * 0.08f;
             if (rand.NextDouble() < 0.5)
                 particleVelocity = -particleVelocity;
+            particleVelocity += robot.endPointNormal * 0.02f;
 
             Mesh m;
             if (particles[currentParticleInd] == null)
             {
                 m = new Mesh(vertices.ToArray(), normalized.ToArray(), indices.ToArray(), null);
-                m.ModelMatrix = Matrix4.Identity;
+                m.ModelMatrix = Matrix4.CreateTranslation(vertices[0]);
                 Particle p = new Particle
                 {
                     old = 0,

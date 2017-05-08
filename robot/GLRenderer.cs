@@ -170,13 +170,14 @@ namespace robot
             GL.DepthMask(true);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
 
+            RenderParticles(deltaTime, camera, true);
             RenderWithPhongLightShader(camera);
-            RenderParticles(deltaTime, camera);
+            RenderParticles(deltaTime, camera, false);
 
             //tutaj dodac renderowanie przez nowe shadery
         }
 
-        private void RenderParticles(float deltaTime, Camera camera)
+        private void RenderParticles(float deltaTime, Camera camera, bool onlyStencil)
         {
             ShaderProgram activeShader = shaders[MyShaderType.PARTICLES];
             GL.UseProgram(activeShader.ProgramID);
@@ -190,10 +191,14 @@ namespace robot
 
             emitter.RefreshParticles(deltaTime);
 
-            Stencil(activeShader, particlesReflection, PrimitiveType.Points, false, false);
-            GL.DepthMask(false);
-            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PARTICLES])
-                DrawMesh(m, activeShader, PrimitiveType.Points);
+            if (onlyStencil)
+                Stencil(activeShader, particlesReflection, PrimitiveType.Points, false, false);
+            else
+            {
+                GL.DepthMask(false);
+                foreach (Mesh m in meshesToDraw[(int)MyShaderType.PARTICLES])
+                     DrawMesh(m, activeShader, PrimitiveType.Points);
+            }
 
             GL.Flush();
         }
