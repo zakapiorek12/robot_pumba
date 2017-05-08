@@ -9,6 +9,8 @@ namespace robot
         private float angularSpeed = (float) (60.0f * Math.PI / 180.0f); //rotations per sec (in radians)
         private float currentAngle;
 
+        public Vector3 endPointPos, endPointNormal, endPointDirection;
+
         private Vector3[] rotationPivotPoints = new Vector3[]
         {
             new Vector3(0, 0, 0), //not used - inserted for convenience when indexing
@@ -40,18 +42,18 @@ namespace robot
 
             float endPointX = (float)(circleRadius * Math.Cos(currentAngle));
             float endPointY = (float)(circleRadius * Math.Sin(currentAngle));
-            Vector4 endPointPos = new Vector4(endPointX, endPointY, 0.0f, 1.0f);
-            endPointPos = endPointPos * rectangle.ModelMatrix;
+            endPointPos = (new Vector4(endPointX, endPointY, 0.0f, 1.0f) * rectangle.ModelMatrix).Xyz;
             //MeshLoader ml = new MeshLoader();
             //Mesh m = ml.GetDoubleSidedRectangleMesh(0.01f, 0.01f, new Vector3(1.0f, 0.0f, 0.0f));
             //m.ModelMatrix = Matrix4.CreateTranslation(endPointPos.Xyz);
             //GLRenderer.AddMeshToDraw(m);
             
-            Vector3 endPointNormal = (new Vector4(0.0f, 0.0f, 1.0f, 0.0f) * rectangle.ModelMatrix).Xyz.Normalized();
+            endPointNormal = (new Vector4(0.0f, 0.0f, 1.0f, 0.0f) * rectangle.ModelMatrix).Xyz.Normalized();
+            endPointDirection = Vector3.Cross((new Vector4(endPointX, endPointY, 0.0f, 0.0f) * rectangle.ModelMatrix).Xyz, endPointNormal);
 
             float a1, a2, a3, a4, a5;
 
-            InverseKinematics(endPointPos.Xyz, endPointNormal, out a1, out a2, out a3, out a4, out a5);
+            InverseKinematics(endPointPos, endPointNormal, out a1, out a2, out a3, out a4, out a5);
 
             meshes[1].ModelMatrix = Matrix4.CreateTranslation(-rotationPivotPoints[1]) *
                 Matrix4.CreateRotationY(a1) *

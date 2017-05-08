@@ -37,10 +37,9 @@ namespace robot
 
         MeshLoader meshLoader = new MeshLoader();
         private Robot robot;
-        //private Emitter emitter;
+        private Emitter emitter;
 
-        private Bitmap texture;
-        private int textureID;
+        private int plateTextureID, particleTextureID;
 
         public GLRenderer(int viewPortWidth, int viewportHeight)
         {
@@ -49,7 +48,8 @@ namespace robot
                 meshesToDraw[i] = new List<Mesh>();
 
             LoadShaders();
-            LoadTexture();
+            LoadTexture("plate.jpg", ref plateTextureID);
+            LoadTexture("iskra.jpg", ref particleTextureID);
             CreateProjectionMatrix(viewPortWidth, viewportHeight);
             CreateScene();
 
@@ -88,7 +88,7 @@ namespace robot
 
         private void CreateScene()
         {
-            rectangle = meshLoader.GetRectangleMesh(1.5f, 1.0f, new Vector4(0.4f, 0.4f, 1.0f, 0.5f));
+            rectangle = meshLoader.GetRectangleMesh(1.5f, 1.0f, new Vector4(0.4f, 0.4f, 0.4f, 0.6f));
             rectangle.isPlate = 1;
             rectangle.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) *
                                      Matrix4.CreateRotationZ((float)(30.0f * Math.PI / 180.0f)) *
@@ -113,15 +113,15 @@ namespace robot
                                    Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f);
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
 
-            //emitter = new Emitter(robot, MyShaderType.PARTICLES);
+            emitter = new Emitter(robot, MyShaderType.PARTICLES);
         }
 
-        private void LoadTexture()
+        private void LoadTexture(string name, ref int id)
         {
-            texture = new Bitmap(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "texture.jpg"));
+            Bitmap texture = new Bitmap(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "textures",  name));
 
-            GL.GenTextures(1, out textureID);
-            GL.BindTexture(TextureTarget.Texture2D, textureID);
+            GL.GenTextures(1, out id);
+            GL.BindTexture(TextureTarget.Texture2D, id);
 
             BitmapData data = texture.LockBits(new System.Drawing.Rectangle(0, 0, texture.Width, texture.Height),
                 ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -145,8 +145,30 @@ namespace robot
                 anim.DoAnimation(deltaTime);
 
             RenderWithPhongLightShader(camera);
-            
+            RenderParticles(camera);
+
             //tutaj dodac renderowanie przez nowe shadery
+        }
+
+        private void RenderParticles(Camera camera)
+        {
+            ShaderProgram activeShader = shaders[MyShaderType.PARTICLES];
+            GL.UseProgram(activeShader.ProgramID);
+            
+            GL.BindTexture(TextureTarget.Texture2D, particleTextureID);
+            
+            GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.One);
+
+            BindCameraAndProjectionToShaders(camera, activeShader);
+            BindLightDataToShaders(activeShader);
+
+            emitter.RefreshParticles();
+
+            //Stencil(activeShader);
+            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PARTICLES])
+                DrawMesh(m, activeShader, PrimitiveType.Points);
+
+            GL.Flush();
         }
 
         private void RenderWithPhongLightShader(Camera camera)
@@ -158,7 +180,7 @@ namespace robot
             GL.Enable(EnableCap.DepthTest);
 
             GL.Enable(EnableCap.Texture2D);
-            GL.BindTexture(TextureTarget.Texture2D, textureID);
+            GL.BindTexture(TextureTarget.Texture2D, plateTextureID);
 
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
@@ -167,20 +189,20 @@ namespace robot
             BindLightDataToShaders(activeShader);
             
             Stencil(activeShader);
-            RenderShadows(activeShader);
-            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
-            //    DrawMesh(m, activeShader);
+            //RenderShadows(activeShader);
+            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
+                DrawMesh(m, activeShader);
 
             GL.Flush();
         }
 
-        private void DrawMesh(Mesh m, ShaderProgram shader)
+        private void DrawMesh(Mesh m, ShaderProgram shader, PrimitiveType mode = PrimitiveType.Triangles)
         {
             m.BindVAO();
             BindMeshMaterialDataToShaders(m, shader);
 
             GL.UniformMatrix4(shader.GetUniform("object_matrix"), false, ref m.ModelMatrix);
-            GL.DrawElements(PrimitiveType.Triangles, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(mode, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
         }
 
         private void RenderShadows(ShaderProgram shader)
