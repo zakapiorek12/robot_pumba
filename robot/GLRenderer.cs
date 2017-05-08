@@ -23,7 +23,7 @@ namespace robot
 
         private float ambientCoefficient = 1.0f;
         private Vector3 lightColor = new Vector3(0.9f, 0.8f, 0.8f);
-        private Vector3 lightPosition = new Vector3(-1.0f, 1.0f, 1.0f);
+        private Vector3 lightPosition = new Vector3(-1.0f, 4.0f, 2.0f);
 
         private static List<Mesh>[] meshesToDraw;
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
@@ -100,13 +100,36 @@ namespace robot
             robot.AddOnScene(MyShaderType.PHONG_LIGHT);
 
             float floorYOffset = -1.0f;
-            Mesh floor = meshLoader.GetRectangleMesh(6.0f, 6.0f, new Vector4(0.8f, 0.8f, 0.8f, 1.0f));
+            float roomSize = 10.0f;
+            Vector4 roomColor = new Vector4(0.8f, 0.2f, 0.2f, 1.0f);
+            Mesh floor = meshLoader.GetRectangleMesh(roomSize, roomSize, roomColor);
             floor.ModelMatrix = Matrix4.CreateRotationX((float)(-Math.PI / 2.0f)) * Matrix4.CreateTranslation(0, floorYOffset, 0);
             GLRenderer.AddMeshToDraw(floor, MyShaderType.PHONG_LIGHT);
 
+            Mesh ceiling = meshLoader.GetRectangleMesh(roomSize, roomSize, roomColor);
+            ceiling.ModelMatrix = Matrix4.CreateRotationX((float)(Math.PI / 2.0f)) * Matrix4.CreateTranslation(0, roomSize + floorYOffset, 0);
+            GLRenderer.AddMeshToDraw(ceiling, MyShaderType.PHONG_LIGHT);
+
+            Mesh left = meshLoader.GetRectangleMesh(roomSize, roomSize, roomColor);
+            left.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI / 2.0f)) * Matrix4.CreateTranslation(-roomSize / 2.0f, roomSize / 2.0f + floorYOffset, 0);
+            GLRenderer.AddMeshToDraw(left, MyShaderType.PHONG_LIGHT);
+
+            Mesh right = meshLoader.GetRectangleMesh(roomSize, roomSize, roomColor);
+            right.ModelMatrix = Matrix4.CreateRotationY((float)(-Math.PI / 2.0f)) * Matrix4.CreateTranslation(roomSize / 2.0f, roomSize / 2.0f + floorYOffset, 0);
+            GLRenderer.AddMeshToDraw(right, MyShaderType.PHONG_LIGHT);
+
+            Mesh front = meshLoader.GetRectangleMesh(roomSize, roomSize, roomColor);
+            front.ModelMatrix = Matrix4.CreateTranslation(0, roomSize / 2.0f + floorYOffset, -roomSize / 2.0f);
+            GLRenderer.AddMeshToDraw(front, MyShaderType.PHONG_LIGHT);
+
+            Mesh back = meshLoader.GetRectangleMesh(roomSize, roomSize, roomColor);
+            back.ModelMatrix = Matrix4.CreateRotationY((float)(Math.PI)) * Matrix4.CreateTranslation(0, roomSize / 2.0f + floorYOffset, roomSize / 2.0f);
+            GLRenderer.AddMeshToDraw(back, MyShaderType.PHONG_LIGHT);
+
             Mesh cylinder = meshLoader.GetCylinderMesh(0.5f, 2.5f, new Vector4(0, 0, 1, 1), 40);
             cylinder.ModelMatrix = Matrix4.CreateRotationX((float)(Math.PI / 2.0f)) *
-                                   Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f);
+                                   Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f) *
+                                   Matrix4.CreateRotationY((float)(Math.PI / 2.0f));
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
         }
 
