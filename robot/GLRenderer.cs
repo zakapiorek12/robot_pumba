@@ -29,7 +29,7 @@ namespace robot
         private static List<Mesh>[] meshesToDraw;
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
         private Mesh rectangle;
-        private Reflection reflection;
+        private Reflection robotReflection, particlesReflection;
 
         private static readonly int maximumContourEdges = 10000;
         Edge[] contourEdges = new Edge[maximumContourEdges];
@@ -96,8 +96,10 @@ namespace robot
             rectangle.CalculateInverted();
             robot = new Robot(rectangle);
 
-            reflection = new Reflection(robot, rectangle);
-            AddAnimatedObject(reflection);
+            emitter = new Emitter(robot, MyShaderType.PARTICLES);
+
+            robotReflection = new Reflection(robot.meshes, rectangle);
+            particlesReflection = new Reflection(emitter.particlesMeshes, rectangle);
 
             AddMeshToDraw(rectangle, MyShaderType.PHONG_LIGHT);
 
@@ -135,8 +137,6 @@ namespace robot
                                    Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f) *
                                    Matrix4.CreateRotationY((float)(Math.PI / 2.0f));
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
-
-            emitter = new Emitter(robot, MyShaderType.PARTICLES);
         }
 
         private void LoadTexture(string name, ref int id)
@@ -167,13 +167,16 @@ namespace robot
             foreach (var anim in animatedObjects)
                 anim.DoAnimation(deltaTime);
 
+            GL.DepthMask(true);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
+
             RenderWithPhongLightShader(camera);
-            RenderParticles(camera);
+            RenderParticles(deltaTime, camera);
 
             //tutaj dodac renderowanie przez nowe shadery
         }
 
-        private void RenderParticles(Camera camera)
+        private void RenderParticles(float deltaTime, Camera camera)
         {
             ShaderProgram activeShader = shaders[MyShaderType.PARTICLES];
             GL.UseProgram(activeShader.ProgramID);
@@ -185,9 +188,10 @@ namespace robot
             BindCameraAndProjectionToShaders(camera, activeShader);
             BindLightDataToShaders(activeShader);
 
-            emitter.RefreshParticles();
+            emitter.RefreshParticles(deltaTime);
 
-            //Stencil(activeShader);
+            Stencil(activeShader, particlesReflection);
+            GL.DepthMask(false);
             foreach (Mesh m in meshesToDraw[(int)MyShaderType.PARTICLES])
                 DrawMesh(m, activeShader, PrimitiveType.Points);
 
@@ -198,8 +202,7 @@ namespace robot
         {
             ShaderProgram activeShader = shaders[MyShaderType.PHONG_LIGHT];
             GL.UseProgram(activeShader.ProgramID);
-
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
+            
             GL.Enable(EnableCap.DepthTest);
 
             GL.Enable(EnableCap.Texture2D);
@@ -211,7 +214,7 @@ namespace robot
             BindCameraAndProjectionToShaders(camera, activeShader);
             BindLightDataToShaders(activeShader);
             
-            Stencil(activeShader);
+            Stencil(activeShader, robotReflection);
             //RenderShadows(activeShader);
             foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
                 DrawMesh(m, activeShader);
@@ -411,9 +414,9 @@ namespace robot
             shadowFacesInd++;
         }
 
-        private void Stencil(ShaderProgram shader)
+        private void Stencil(ShaderProgram shader, Reflection reflection)
         {
-            GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
+            //GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
 
             GL.DepthMask(false);
             GL.Enable(EnableCap.StencilTest);
@@ -423,14 +426,20 @@ namespace robot
             GL.StencilOp(StencilOp.Zero, StencilOp.Zero, StencilOp.Replace);
             GL.Clear(ClearBufferMask.StencilBufferBit);
 
-            DrawMesh(rectangle, shader);
+            DrawMesh(reflection.mirror, shader);
 
             GL.StencilMask(0);
             GL.DepthMask(true);
             GL.StencilFunc(StencilFunction.Equal, 1, ~0);
             GL.StencilOp(StencilOp.Zero, StencilOp.Zero, StencilOp.Replace);
-            foreach (var mesh in reflection.meshes)
-                DrawMesh(mesh, shader);
+            foreach (var mesh in reflection.mirroredObject)
+                if (mesh != null)
+                {
+                    Matrix4 prevMat = mesh.ModelMatrix;
+                    mesh.ModelMatrix = mesh.ModelMatrix*reflection.MirrorMatrix;
+                    DrawMesh(mesh, shader);
+                    mesh.ModelMatrix = prevMat;
+                }
 
             GL.Disable(EnableCap.StencilTest);
         }

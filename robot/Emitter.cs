@@ -9,20 +9,22 @@ namespace robot
 {
     class Emitter
     {
+        private static readonly int MAX_PARTICLES = 400;
         class Particle
         {
-            public Mesh mesh;
-            public int old;
+            public float old;
             public Vector3 velocity;
         }
 
-        static int MAX_OLD = 20;
+        static float MAX_OLD = 0.4f; //in seconds
         static int PARTICLE_PER_FRAME = 10;
+        private int insertedParticlesInThisSec;
 
         private Random rand = new Random();
         private GLRenderer.MyShaderType shaderType;
         private Robot robot;
-        private List<Particle> particles = new List<Particle>();
+        private Particle[] particles = new Particle[MAX_PARTICLES];
+        public Mesh[] particlesMeshes = new Mesh[MAX_PARTICLES];
 
         public Emitter(Robot robot, GLRenderer.MyShaderType shaderType)
         {
@@ -30,32 +32,45 @@ namespace robot
             this.shaderType = shaderType;
         }
 
-        public void RefreshParticles()
+        public void RefreshParticles(float deltaTime)
         {
-            for (int i = 0; i < particles.Count;)
+            insertedParticlesInThisSec = 0;
+            
+            for (int i = 0; i < particles.Length; i++)
             {
-                Particle p = particles[i];
-                p.old += 1;
-                if (p.old >= MAX_OLD)
+                if (particles[i] == null)
                 {
-                    GLRenderer.RemoveMeshToDraw(p.mesh);
-                    particles.Remove(p);
+                    if (insertedParticlesInThisSec < PARTICLE_PER_FRAME)
+                    {
+                        AddParticle(i);
+                        insertedParticlesInThisSec++;
+                    }
                     continue;
                 }
-                i++;
+                Particle p = particles[i];
+                p.old += deltaTime;
+                if (p.old >= MAX_OLD)
+                    p.old = MAX_OLD;
 
-                p.mesh.NormalizedVertexBuffer[0].vertex += p.velocity;//update position
-                p.mesh.NormalizedVertexBuffer[0].normal.X = p.old / (float)MAX_OLD;//update transparency
+                if (p.old >= MAX_OLD)
+                {
+                    if (insertedParticlesInThisSec < PARTICLE_PER_FRAME)
+                    {
+                        AddParticle(i);
+                        insertedParticlesInThisSec++;
+                    }
+                    continue;
+                }
+
+                particlesMeshes[i].NormalizedVertexBuffer[0].vertex += p.velocity;//update position
+                particlesMeshes[i].NormalizedVertexBuffer[0].normal.X = p.old / MAX_OLD;//update transparency
                 p.velocity -= new Vector3(0.0f, 0.0001f, 0.0f);//gravity
 
-                p.mesh.FillVbos();
+                particlesMeshes[i].FillVbos();
             }
-
-            for (int i = 0; i < PARTICLE_PER_FRAME; i++)
-                AddParticle();
         }
 
-        private void AddParticle()
+        private void AddParticle(int currentParticleInd)
         {
             List<Vector3> vertices = new List<Vector3>();
             vertices.Add(robot.endPointPos);
@@ -65,20 +80,36 @@ namespace robot
 
             List<uint> indices = new List<uint> { 0 };
 
-            Mesh m = new Mesh(vertices.ToArray(), normalized.ToArray(), indices.ToArray(), null);
-            m.ModelMatrix = Matrix4.Identity;
-            Vector3 r = new Vector3((float)rand.NextDouble() - 0.5f, (float)rand.NextDouble() - 0.5f, (float)rand.NextDouble() - 0.5f);
+            Vector3 r = new Vector3((float)rand.NextDouble() - 0.5f, (float)rand.NextDouble() - 0.5f,
+                    (float)rand.NextDouble() - 0.5f);
             r /= 8f;
             Vector3 particleVelocity = (r + robot.endPointDirection) * 0.08f;
-            Particle p = new Particle
-            {
-                mesh = m,
-                old = 0,
-                velocity = particleVelocity
-            };
+            if (rand.NextDouble() < 0.5)
+                particleVelocity = -particleVelocity;
 
-            particles.Add(p);
-            GLRenderer.AddMeshToDraw(m, shaderType);
+            Mesh m;
+            if (particles[currentParticleInd] == null)
+            {
+                m = new Mesh(vertices.ToArray(), normalized.ToArray(), indices.ToArray(), null);
+                m.ModelMatrix = Matrix4.Identity;
+                Particle p = new Particle
+                {
+                    old = 0,
+                    velocity = particleVelocity
+                };
+
+                particlesMeshes[currentParticleInd] = m;
+                particles[currentParticleInd] = p;
+                GLRenderer.AddMeshToDraw(m, shaderType);
+            }
+            else
+            {
+                particles[currentParticleInd].old = 0;
+                particles[currentParticleInd].velocity = particleVelocity;
+                particlesMeshes[currentParticleInd].NormalizedVertexBuffer = normalized.ToArray();
+                particlesMeshes[currentParticleInd].VertexBuffer = vertices.ToArray();
+                particlesMeshes[currentParticleInd].FillVbos();
+            }
         }
     }
 }

@@ -9,5 +9,9 @@ out vec4 color;
 
 void main()
 {
-	color = vec4(texture(tex, fs_texturePos).xyz, 1.0f - fs_normal.x);  
+	float alpha = 1.0f - fs_normal.x;
+	if(alpha <= 0.01)
+		color = vec4(0, 0, 0, 0);
+	else
+		color = vec4(texture(tex, fs_texturePos).xyz, 1.0f - fs_normal.x);  
 } 
