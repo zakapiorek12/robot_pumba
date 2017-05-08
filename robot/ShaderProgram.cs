@@ -15,6 +15,7 @@ namespace robot
         public int ProgramID = -1;
         public int VShaderID = -1;
         public int FShaderID = -1;
+        public int GShaderID = -1;
         public int AttributeCount = 0;
         public int UniformCount = 0;
 
@@ -50,6 +51,8 @@ namespace robot
             {
                 loadShader(code, type, out FShaderID);
             }
+            else if (type == ShaderType.GeometryShader)
+                loadShader(code, type, out GShaderID);
         }
 
         public string LoadShaderFromFile(String filename, ShaderType type)
@@ -67,11 +70,16 @@ namespace robot
                     code = sr.ReadToEnd();
                     loadShader(code, type, out FShaderID);
                 }
+                else if (type == ShaderType.GeometryShader)
+                {
+                    code = sr.ReadToEnd();
+                    loadShader(code, type, out GShaderID);
+                }
             }
             return code;
         }
 
-        public void Link(string vsShaderCode, string fsShaderCode)
+        public void Link(params string[] shadersCode)
         {
             GL.LinkProgram(ProgramID);
 
@@ -82,7 +90,9 @@ namespace robot
             GL.GetProgram(ProgramID, GetProgramParameterName.ActiveAttributes, out AttributeCount);
             GL.GetProgram(ProgramID, GetProgramParameterName.ActiveUniforms, out UniformCount);
 
-            string vsfsCode = vsShaderCode + fsShaderCode;
+            string vsfsCode = "";
+            foreach (string s in shadersCode)
+                vsfsCode += s;
             vsfsCode = Regex.Replace(vsfsCode, @"\s+", " "); // kasowanie podwojnych bialych znakow - aby byl co najwyzej jeden miedzy wyrazami
             vsfsCode = vsfsCode.Replace("\r\n", "\n");
             string[] lines = vsfsCode.Split(';');
@@ -115,39 +125,6 @@ namespace robot
                 if (!Attributes.ContainsKey(attr.name))
                     Attributes.Add(attr.name, attr);
             }
-            //for (int i = 0; i < AttributeCount; i++)
-            //{
-            //    AttributeInfo info = new AttributeInfo();
-            //    int length = 0;
-
-            //    StringBuilder name = new StringBuilder();
-
-            //    GL.GetActiveAttrib(ProgramID, i, 256, out length, out info.size, out info.type, name);
-
-            //    if (length > 0)
-            //    {
-            //        info.name = name.ToString();
-            //        info.address = GL.GetAttribLocation(ProgramID, info.name);
-            //        Attributes.Add(name.ToString(), info);
-            //    }
-            //}
-
-            //for (int i = 0; i < UniformCount; i++)
-            //{
-            //    UniformInfo info = new UniformInfo();
-            //    int length = 0;
-
-            //    StringBuilder name = new StringBuilder();
-
-            //    //ponizsza funkcja crashuje - albo bug OpenTK albo problem ze sterownikami - najlepiej bedzie recznie chyba brac location uniformow niz uzywac tej funkcji do uzyskania nazw atrybutow/uniformow
-            //    GL.GetActiveUniform(ProgramID, i, 256, out length, out info.size, out info.type, name);
-            //    if (length > 0)
-            //    {
-            //        info.name = name.ToString();
-            //        Uniforms.Add(name.ToString(), info);
-            //        info.address = GL.GetUniformLocation(ProgramID, info.name);
-            //    }
-            //}
 
         }
 
@@ -238,6 +215,29 @@ namespace robot
             }
 
             Link(vsShaderCode, fsShaderCode);
+            GenBuffers();
+        }
+
+        public ShaderProgram(string vshader, string fshader, string gshader, bool fromFile = false)
+        {
+            ProgramID = GL.CreateProgram();
+
+            string vsShaderCode = vshader, fsShaderCode = fshader, gsShaderCode = gshader;
+
+            if (fromFile)
+            {
+                vsShaderCode = LoadShaderFromFile(vshader, ShaderType.VertexShader);
+                fsShaderCode = LoadShaderFromFile(fshader, ShaderType.FragmentShader);
+                gsShaderCode = LoadShaderFromFile(gshader, ShaderType.GeometryShader);
+            }
+            else
+            {
+                LoadShaderFromString(vshader, ShaderType.VertexShader);
+                LoadShaderFromString(fshader, ShaderType.FragmentShader);
+                LoadShaderFromString(gshader, ShaderType.GeometryShader);
+            }
+
+            Link(vsShaderCode, fsShaderCode, gsShaderCode);
             GenBuffers();
         }
 
