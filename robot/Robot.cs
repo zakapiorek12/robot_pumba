@@ -32,6 +32,7 @@ namespace robot
         public override Mesh[] ProvideObjectMeshes()
         {
             MeshLoader ml = new MeshLoader();
+            //return new Mesh[] {ml.GetCubeMesh(1.0f, new Vector4(1, 0, 0, 1))};
             return ml.GetRobotMesh();
         }
 

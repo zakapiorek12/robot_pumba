@@ -24,7 +24,7 @@ namespace robot
 
         private float ambientCoefficient = 1.0f;
         private Vector3 lightColor = new Vector3(0.9f, 0.8f, 0.8f);
-        private Vector3 lightPosition = new Vector3(-1.0f, 4.0f, 2.0f);
+        private Vector3 lightPosition = new Vector3(0.0f, 4.0f, 2.0f);
 
         private static List<Mesh>[] meshesToDraw;
         private static List<AnimatedObject> animatedObjects = new List<AnimatedObject>();
@@ -40,6 +40,8 @@ namespace robot
         private Emitter emitter;
 
         private int plateTextureID, particleTextureID;
+
+        private Mesh cube;
 
         public GLRenderer(int viewPortWidth, int viewportHeight)
         {
@@ -137,6 +139,10 @@ namespace robot
                                    Matrix4.CreateTranslation(1.5f, 0.51f + floorYOffset, 0.0f) *
                                    Matrix4.CreateRotationY((float)(Math.PI / 2.0f));
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
+
+            cube = meshLoader.GetCubeMesh(1.0f, new Vector4(1, 0, 0, 1));
+            cube.ModelMatrix = Matrix4.CreateTranslation(2.0f, 0, 0);
+            GLRenderer.AddMeshToDraw(cube, MyShaderType.PHONG_LIGHT);
         }
 
         private void LoadTexture(string name, ref int id)
@@ -220,9 +226,8 @@ namespace robot
             BindLightDataToShaders(activeShader);
             
             Stencil(activeShader, robotReflection, PrimitiveType.Triangles);
-            //RenderShadows(activeShader);
-            foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
-                DrawMesh(m, activeShader);
+            RenderWithShadows(robot.meshes, activeShader, false);
+            //RenderShadows(new Mesh[] {cube}, activeShader, true); //nie moga byc 2 na raz bo tak gowniano zrobione ze renderowana jest od nowa scena w kazdym wywolaniu RenderSahdows
 
             GL.Flush();
         }
@@ -236,77 +241,110 @@ namespace robot
             GL.DrawElements(mode, m.IndexBuffer.Length, DrawElementsType.UnsignedInt, 0);
         }
 
-        private void RenderShadows(ShaderProgram shader)
+        private void RenderWithShadows(Mesh[] meshesToCreateShadowFrom, ShaderProgram shader, bool detectContourEdgesBruteForce)
         {
             int shadowFacesInd = 0;
             int contourEdgeInd = 0;
-            foreach (Mesh m in robot.meshes)
+            HashSet<Edge> hashsetEdges = new HashSet<Edge>();
+            foreach (Mesh m in meshesToCreateShadowFrom)
             {
-                Vector3 lightPos = (new Vector4(lightPosition, 1) * m.ModelMatrix.Inverted()).Xyz;
-                for(int i = 0; i < m.Neighbourhood.Length; i++)
+                //lightPosition juz mamy we wspolrzednych swiata defaultowo
+                if (!detectContourEdgesBruteForce)
                 {
-                    Triangle firstTri = m.TrianglesList[m.Neighbourhood[i].firstTriangle];
-                    Vector3 triangleCenter1 = (m.NormalizedVertexBuffer[firstTri.firstVertex].vertex +
-                        m.NormalizedVertexBuffer[firstTri.secondVertex].vertex +
-                        m.NormalizedVertexBuffer[firstTri.thirdVertex].vertex) / 3.0f;
-                    triangleCenter1 = (new Vector4(triangleCenter1, 1)*m.ModelMatrix).Xyz;
-                    Vector3 lightDir1 = triangleCenter1 - lightPos;
-                    Vector3 triangleNormal1 = m.NormalizedVertexBuffer[firstTri.firstVertex].normal;
-                    triangleNormal1 = (new Vector4(triangleNormal1, 0) *m.ModelMatrix).Xyz;
-
-                    Triangle secTri = m.TrianglesList[m.Neighbourhood[i].secondTriangle];
-                    Vector3 triangleCenter2 = (m.NormalizedVertexBuffer[secTri.firstVertex].vertex +
-                        m.NormalizedVertexBuffer[secTri.secondVertex].vertex +
-                        m.NormalizedVertexBuffer[secTri.thirdVertex].vertex) / 3.0f;
-                    triangleCenter2 = (new Vector4(triangleCenter2, 1) * m.ModelMatrix).Xyz;
-                    Vector3 lightDir2 = triangleCenter2 - lightPos;
-                    Vector3 triangleNormal2 = m.NormalizedVertexBuffer[secTri.firstVertex].normal;
-                    triangleNormal2 = (new Vector4(triangleNormal2, 0) * m.ModelMatrix).Xyz;
-
-                    float dot1 = Vector3.Dot(lightDir1, triangleNormal1);
-                    float dot2 = Vector3.Dot(lightDir2, triangleNormal2);
-                    if (dot1 * dot2 <= 0.0f)
+                    for (int i = 0; i < m.Neighbourhood.Length; i++)
                     {
-                        //tylny trojkat jako przednie denko chcemy
-                        uint triangleInd = dot1 >= 0
-                            ? m.Neighbourhood[i].firstTriangle
-                            : m.Neighbourhood[i].secondTriangle;
-                        contourEdges[contourEdgeInd] = new Edge(m.VertexBuffer[m.Neighbourhood[i].firstVertex],
-                            m.VertexBuffer[m.Neighbourhood[i].secondVertex], triangleInd);
-                        contourEdges[contourEdgeInd].first = (new Vector4(contourEdges[contourEdgeInd].first, 1) * m.ModelMatrix).Xyz;
-                        contourEdges[contourEdgeInd].second = (new Vector4(contourEdges[contourEdgeInd].second, 1) * m.ModelMatrix).Xyz;
+                        Triangle firstTri = m.TrianglesList[m.Neighbourhood[i].firstTriangle];
+                        Vector3 triangleCenter1 = (m.NormalizedVertexBuffer[firstTri.firstVertex].vertex +
+                                                   m.NormalizedVertexBuffer[firstTri.secondVertex].vertex +
+                                                   m.NormalizedVertexBuffer[firstTri.thirdVertex].vertex)/3.0f;
+                        triangleCenter1 = (new Vector4(triangleCenter1, 1)*m.ModelMatrix).Xyz;
+                        Vector3 lightDir1 = triangleCenter1 - lightPosition;
+                        Vector3 triangleNormal1 = m.NormalizedVertexBuffer[firstTri.firstVertex].normal;
+                        triangleNormal1 = (new Vector4(triangleNormal1, 0)*m.ModelMatrix).Xyz;
+
+                        Triangle secTri = m.TrianglesList[m.Neighbourhood[i].secondTriangle];
+                        Vector3 triangleCenter2 = (m.NormalizedVertexBuffer[secTri.firstVertex].vertex +
+                                                   m.NormalizedVertexBuffer[secTri.secondVertex].vertex +
+                                                   m.NormalizedVertexBuffer[secTri.thirdVertex].vertex)/3.0f;
+                        triangleCenter2 = (new Vector4(triangleCenter2, 1)*m.ModelMatrix).Xyz;
+                        Vector3 lightDir2 = triangleCenter2 - lightPosition;
+                        Vector3 triangleNormal2 = m.NormalizedVertexBuffer[secTri.firstVertex].normal;
+                        triangleNormal2 = (new Vector4(triangleNormal2, 0)*m.ModelMatrix).Xyz;
+
+                        float dot1 = Vector3.Dot(lightDir1, triangleNormal1);
+                        float dot2 = Vector3.Dot(lightDir2, triangleNormal2);
+                        if (dot1*dot2 <= 0.0f)
+                        {
+                            //WAZNE!!! W modelu pumba mamy podanych sasiadow (2 trojkaty i krawedz je laczaca ale zeby odroznic sciany bryly cienia tylne od przednich - to tutaj wprowadzam rozna kolejnosc wierzcholkow krawedzi w zaleznosci od iloczynu iloczynow skalarnych
+                            if (dot1 <= 0.0f)
+                                contourEdges[contourEdgeInd] = new Edge(m.VertexBuffer[m.Neighbourhood[i].firstVertex],
+                                    m.VertexBuffer[m.Neighbourhood[i].secondVertex]);
+                            else
+                                contourEdges[contourEdgeInd] = new Edge(m.VertexBuffer[m.Neighbourhood[i].secondVertex],
+                                    m.VertexBuffer[m.Neighbourhood[i].firstVertex]);
+                            contourEdges[contourEdgeInd].first =
+                                (new Vector4(contourEdges[contourEdgeInd].first, 1)*m.ModelMatrix).Xyz;
+                            contourEdges[contourEdgeInd].second =
+                                (new Vector4(contourEdges[contourEdgeInd].second, 1)*m.ModelMatrix).Xyz;
+                            contourEdgeInd++;
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 2; i < m.NormalizedVertexBuffer.Length; i += 3)
+                    {
+                        Vector3 triangleCenter1 = (m.NormalizedVertexBuffer[i - 2].vertex +
+                                                   m.NormalizedVertexBuffer[i - 1].vertex +
+                                                   m.NormalizedVertexBuffer[i].vertex)/3.0f;
+                        triangleCenter1 = (new Vector4(triangleCenter1, 1)*m.ModelMatrix).Xyz;
+                        Vector3 lightDir1 = triangleCenter1 - lightPosition;
+                        Vector3 triangleNormal1 = m.NormalizedVertexBuffer[i].normal;
+                        triangleNormal1 = (new Vector4(triangleNormal1, 0)*m.ModelMatrix).Xyz;
+
+                        float dot1 = Vector3.Dot(lightDir1, triangleNormal1);
+                        if (dot1 >= 0.0f)
+                        {
+                            for (int k = i - 2, n = i; k < i - 2 + 3; n = k, k++)
+                            {
+                                Edge e1 = new Edge(m.NormalizedVertexBuffer[k].vertex,
+                                    m.NormalizedVertexBuffer[n].vertex);
+                                e1.first =
+                                    (new Vector4(e1.first, 1)*m.ModelMatrix).Xyz;
+                                e1.second =
+                                    (new Vector4(e1.second, 1)*m.ModelMatrix).Xyz;
+
+                                Edge e2 = new Edge(e1.second, e1.first);
+
+                                if (hashsetEdges.Contains(e1))
+                                {
+                                    hashsetEdges.Remove(e1);
+                                }
+                                else if (hashsetEdges.Contains(e2))
+                                    hashsetEdges.Remove(e2);
+                                else
+                                    hashsetEdges.Add(e1);
+                            }
+                        }
+                    }
+                    contourEdgeInd = 0;
+                    foreach (Edge e in hashsetEdges)
+                    {
+                        contourEdges[contourEdgeInd] = e;
                         contourEdgeInd++;
                     }
                 }
-                
+
                 float extrusion = 1000f;
-                Matrix4 backFaceRotationMat = Matrix4.CreateRotationY((float)- Math.PI);
                 for(int i = 0; i < contourEdgeInd; i++)
                 {
                     Edge e = contourEdges[i];
                     Vector3 vert1 = e.first;
                     Vector3 vert2 = e.second;
-                    Vector3 vert3 = e.second + extrusion * (e.second - lightPos);
-                    Vector3 vert4 = e.first + extrusion * (e.first - lightPos);
+                    Vector3 vert3 = e.first + extrusion * (e.first - lightPosition);
+                    Vector3 vert4 = e.second + extrusion * (e.second - lightPosition);
 
                     AddNewShadowFace(ref shadowFacesInd, vert1, vert2, vert3, vert4);
-
-                    Triangle tri = m.TrianglesList[e.triangleInd];
-                    Vector3 triVert1 = m.NormalizedVertexBuffer[tri.firstVertex].vertex;
-                    triVert1 = (new Vector4(triVert1, 1) * m.ModelMatrix).Xyz;
-                    Vector3 triVert2 = m.NormalizedVertexBuffer[tri.secondVertex].vertex;
-                    triVert2 = (new Vector4(triVert2, 1) * m.ModelMatrix).Xyz;
-                    Vector3 triVert3 = m.NormalizedVertexBuffer[tri.thirdVertex].vertex;
-                    triVert3 = (new Vector4(triVert3, 1) * m.ModelMatrix).Xyz;
-
-                    AddNewShadowFace(ref shadowFacesInd, triVert1, triVert2, triVert3, triVert3);
-
-                    Vector4 center = new Vector4(triVert1 + triVert2 + triVert3, 0)/3.0f;
-                    triVert1 = (((new Vector4(triVert1, 1) - center) * backFaceRotationMat + center) * m.ModelMatrix).Xyz + extrusion * (triVert1 - lightPos);
-                    triVert2 = (((new Vector4(triVert2, 1) - center) * backFaceRotationMat + center) * m.ModelMatrix).Xyz + extrusion * (triVert2 - lightPos);
-                    triVert3 = (((new Vector4(triVert3, 1) - center) * backFaceRotationMat + center) * m.ModelMatrix).Xyz + extrusion * (triVert3 - lightPos);
-
-                    AddNewShadowFace(ref shadowFacesInd, triVert1, triVert2, triVert3, triVert3);
                 }
 
                 contourEdgeInd = 0;
@@ -319,7 +357,7 @@ namespace robot
             //Matrix4 mat = Matrix4.CreateRotationX((float)(-Math.PI / 4.0f));
             //AddNewShadowFace(ref shadowFacesInd, (v1 * mat).Xyz, (v2 * mat).Xyz, (v3 * mat).Xyz, (v4 * mat).Xyz);
 
-            //mat = Matrix4.CreateRotationY((float)(-Math.PI)) * Matrix4.CreateTranslation(0, 0, -0.8f) * Matrix4.CreateRotationX((float)(-Math.PI / 4.0f));
+            //mat = Matrix4.CreateRotationY((float) Math.PI) * Matrix4.CreateTranslation(0, 0, -0.8f) * Matrix4.CreateRotationX((float)(-Math.PI / 4.0f));
             //AddNewShadowFace(ref shadowFacesInd, (v1 * mat).Xyz, (v2 * mat).Xyz, (v3 * mat).Xyz, (v4 * mat).Xyz);
 
             //mat = Matrix4.CreateRotationY((float)(-Math.PI / 2.0f)) * Matrix4.CreateTranslation(-0.5f, 0, -0.5f);
@@ -327,47 +365,7 @@ namespace robot
 
 
 
-            //I sposob
-            //GL.DepthMask(true);
-            //GL.ColorMask(true, true, true, true);
-            //GL.CullFace(CullFaceMode.Back);
-            //GL.DepthFunc(DepthFunction.Lequal);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Keep);
-            //GL.StencilFunc(StencilFunction.Greater, 0, ~0);
-            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
-            //    DrawMesh(m, shader);
-            //GL.StencilFunc(StencilFunction.Equal, 0, ~0);
-            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
-            //    DrawMesh(m, shader);
-            //GL.Disable(EnableCap.StencilTest);
-
-            //GL.ColorMask(false, false, false, false);
-            //foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
-            //    DrawMesh(m, shader);
-            //GL.Enable(EnableCap.CullFace);
-            //GL.Enable(EnableCap.StencilTest);
-            //GL.DepthMask(false);
-            //GL.StencilFunc(StencilFunction.Always, 0, ~0);
-            //GL.CullFace(CullFaceMode.Back);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Incr);
-            //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i], shader);
-            //GL.CullFace(CullFaceMode.Front);
-            //GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Decr);
-            //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i], shader);
-
-            //GL.ColorMask(false, false, false, false);
-            //GL.Disable(EnableCap.CullFace);
-            //GL.Enable(EnableCap.StencilTest);
-            //GL.DepthMask(false);
-            //GL.StencilOpSeparate(StencilFace.Front, StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
-            //GL.StencilOpSeparate(StencilFace.Back, StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
-            //GL.StencilFuncSeparate(StencilFace.FrontAndBack, StencilFunction.Always, 0, ~0);
-            //for (int i = 0; i < shadowFacesInd; i++)
-            //    DrawMesh(shadowFaces[i], shader);
-
-            //II sposob
+            //renderowanie cieni
             GL.DepthMask(true);
             GL.ColorMask(true, true, true, true);
             GL.StencilMask(~0);
@@ -387,6 +385,7 @@ namespace robot
             GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
             for (int i = 0; i < shadowFacesInd; i++)
                 DrawMesh(shadowFaces[i], shader);
+
             GL.CullFace(CullFaceMode.Front);
             GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
             for (int i = 0; i < shadowFacesInd; i++)
@@ -402,20 +401,28 @@ namespace robot
             GL.Uniform1(shader.GetUniform("drawUnlitScene"), 0);
             foreach (Mesh m in meshesToDraw[(int)MyShaderType.PHONG_LIGHT])
                 DrawMesh(m, shader);
+
+            //for (int i = 0; i < shadowFacesInd; i++)
+            //    DrawMesh(shadowFaces[i], shader);
         }
 
         private void AddNewShadowFace(ref int shadowFacesInd, Vector3 vert1, Vector3 vert2, Vector3 vert3, Vector3 vert4)
         {
             if (shadowFaces[shadowFacesInd] != null)
             {
-                shadowFaces[shadowFacesInd].VertexBuffer[0] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[0].vertex = vert1;
-                shadowFaces[shadowFacesInd].VertexBuffer[1] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[1].vertex = vert2;
-                shadowFaces[shadowFacesInd].VertexBuffer[2] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[2].vertex = vert3;
-                shadowFaces[shadowFacesInd].VertexBuffer[3] = shadowFaces[shadowFacesInd].NormalizedVertexBuffer[3].vertex = vert4;
+                    shadowFaces[shadowFacesInd].VertexBuffer[0] =
+                        shadowFaces[shadowFacesInd].NormalizedVertexBuffer[0].vertex = vert1;
+                    shadowFaces[shadowFacesInd].VertexBuffer[1] =
+                        shadowFaces[shadowFacesInd].NormalizedVertexBuffer[1].vertex = vert2;
+                    shadowFaces[shadowFacesInd].VertexBuffer[2] =
+                        shadowFaces[shadowFacesInd].NormalizedVertexBuffer[2].vertex = vert3;
+                    shadowFaces[shadowFacesInd].VertexBuffer[3] =
+                        shadowFaces[shadowFacesInd].NormalizedVertexBuffer[3].vertex = vert4;
                 shadowFaces[shadowFacesInd].FillVbos();
             }
             else
                 shadowFaces[shadowFacesInd] = meshLoader.GetShadowQuadMesh(vert1, vert2, vert3, vert4);
+
             shadowFacesInd++;
         }
 

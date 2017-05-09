@@ -26,6 +26,184 @@ namespace robot
             return mesh;
         }
 
+        internal Mesh GetCubeMesh(float size, Vector4 surfaceColor)
+        {
+            Vector3[] vertices = new Vector3[]
+            {
+                new Vector3(-size/2.0f, -size/2.0f, 0),
+                new Vector3(-size/2.0f, size/2.0f, 0),
+                new Vector3(size/2.0f, -size/2.0f, 0),
+                new Vector3(size/2.0f, size/2.0f, 0),
+
+                new Vector3(-size/2.0f, -size/2.0f, 0),
+                new Vector3(-size/2.0f, size/2.0f, 0),
+                new Vector3(size/2.0f, -size/2.0f, 0),
+                new Vector3(size/2.0f, size/2.0f, 0)
+            };
+            Normalized[] normalized = new Normalized[6*6];
+            Vector4[] face = new Vector4[6]
+            {
+                new Vector4(vertices[0], 1),
+                new Vector4(vertices[2], 1),
+                new Vector4(vertices[1], 1),
+                new Vector4(vertices[1], 1),
+                new Vector4(vertices[2], 1),
+                new Vector4(vertices[3], 1)
+            };
+            Matrix4 rot = Matrix4.CreateTranslation(0, 0, size / 2.0f);
+            for (int i = 0; i < 6; i++)
+                normalized[i] = new Normalized()
+                {
+                    normal = Vector3.UnitZ,
+                    vertex = (face[i % 6] * rot).Xyz,
+                    texturePos = new Vector2(0.0f, 0.0f)
+                };
+
+            rot = Matrix4.CreateRotationY((float)Math.PI) * Matrix4.CreateTranslation(0, 0, -size/2.0f);
+            for (int i = 6; i < 12; i++)
+                normalized[i] = new Normalized()
+                {
+                    normal = -Vector3.UnitZ,
+                    vertex = (face[i % 6] * rot).Xyz,
+                    texturePos = new Vector2(0.0f, 0.0f)
+                };
+
+            rot = Matrix4.CreateRotationY((float)-Math.PI / 2.0f) * Matrix4.CreateTranslation(-size/2.0f, 0, 0);
+            for (int i = 12; i < 18; i++)
+                normalized[i] = new Normalized()
+                {
+                    normal = -Vector3.UnitX,
+                    vertex = (face[i % 6] * rot).Xyz,
+                    texturePos = new Vector2(0.0f, 0.0f)
+                };
+
+            rot = Matrix4.CreateRotationY((float)Math.PI / 2.0f) * Matrix4.CreateTranslation(size / 2.0f, 0, 0);
+            for (int i = 18; i < 24; i++)
+                normalized[i] = new Normalized()
+                {
+                    normal = Vector3.UnitX,
+                    vertex = (face[i % 6] * rot).Xyz,
+                    texturePos = new Vector2(0.0f, 0.0f)
+                };
+
+            rot = Matrix4.CreateRotationX((float)-Math.PI / 2.0f) * Matrix4.CreateTranslation(0, size / 2.0f, 0);
+            for (int i = 24; i < 30; i++)
+                normalized[i] = new Normalized()
+                {
+                    normal = Vector3.UnitY,
+                    vertex = (face[i % 6] * rot).Xyz,
+                    texturePos = new Vector2(0.0f, 0.0f)
+                };
+
+            rot = Matrix4.CreateRotationX((float)Math.PI / 2.0f) * Matrix4.CreateTranslation(0, -size / 2.0f, 0);
+            for (int i = 30; i < 36; i++)
+                normalized[i] = new Normalized()
+                {
+                    normal = -Vector3.UnitY,
+                    vertex = (face[i % 6] * rot).Xyz,
+                    texturePos = new Vector2(0.0f, 0.0f)
+                };
+
+            //Vector3[] vertices = new Vector3[]
+            //{
+            //    new Vector3(-size/2.0f, -size/2.0f, size/2.0f),
+            //    new Vector3(-size/2.0f, size/2.0f, size/2.0f),
+            //    new Vector3(size/2.0f, -size/2.0f, size/2.0f),
+            //    new Vector3(size/2.0f, size/2.0f, size/2.0f),
+
+            //    new Vector3(-size/2.0f, -size/2.0f, -size/2.0f),
+            //    new Vector3(-size/2.0f, size/2.0f, -size/2.0f),
+            //    new Vector3(size/2.0f, -size/2.0f, -size/2.0f),
+            //    new Vector3(size/2.0f, size/2.0f, -size/2.0f)
+            //};
+            //Normalized[] normalized = new Normalized[6*6]
+            //{
+            //    //front face
+            //    new Normalized() {normal = Vector3.UnitZ, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitZ, vertex = vertices[2], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = Vector3.UnitZ, vertex = vertices[1], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitZ, vertex = vertices[1], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitZ, vertex = vertices[2], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = Vector3.UnitZ, vertex = vertices[3], texturePos = new Vector2(1.0f, 1.0f)},
+
+            //    // back face
+            //    new Normalized() {normal = -Vector3.UnitZ, vertex = vertices[4], texturePos = new Vector2(0.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitZ, vertex = vertices[6], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = -Vector3.UnitZ, vertex = vertices[5], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitZ, vertex = vertices[5], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitZ, vertex = vertices[6], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = -Vector3.UnitZ, vertex = vertices[7], texturePos = new Vector2(1.0f, 1.0f)},
+
+            //    //left
+            //    new Normalized() {normal = -Vector3.UnitX, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitX, vertex = vertices[4], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = -Vector3.UnitX, vertex = vertices[1], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitX, vertex = vertices[1], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitX, vertex = vertices[4], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = -Vector3.UnitX, vertex = vertices[5], texturePos = new Vector2(1.0f, 1.0f)},
+
+            //    //right
+            //    new Normalized() {normal = Vector3.UnitX, vertex = vertices[2], texturePos = new Vector2(0.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitX, vertex = vertices[6], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = Vector3.UnitX, vertex = vertices[3], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitX, vertex = vertices[3], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitX, vertex = vertices[6], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = Vector3.UnitX, vertex = vertices[7], texturePos = new Vector2(1.0f, 1.0f)},
+
+            //    //up
+            //    new Normalized() {normal = Vector3.UnitY, vertex = vertices[1], texturePos = new Vector2(0.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitY, vertex = vertices[3], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = Vector3.UnitY, vertex = vertices[5], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitY, vertex = vertices[5], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = Vector3.UnitY, vertex = vertices[3], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = Vector3.UnitY, vertex = vertices[7], texturePos = new Vector2(1.0f, 1.0f)},
+
+            //    //bottom
+            //    new Normalized() {normal = -Vector3.UnitY, vertex = vertices[0], texturePos = new Vector2(0.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitY, vertex = vertices[2], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = -Vector3.UnitY, vertex = vertices[4], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitY, vertex = vertices[4], texturePos = new Vector2(1.0f, 0.0f)},
+            //    new Normalized() {normal = -Vector3.UnitY, vertex = vertices[2], texturePos = new Vector2(0.0f, 1.0f)},
+            //    new Normalized() {normal = -Vector3.UnitY, vertex = vertices[5], texturePos = new Vector2(1.0f, 1.0f)},
+            //};
+            Neighbour[] neighhours = new Neighbour[]
+            {
+                new Neighbour() {firstTriangle = 0, secondTriangle = 1, firstVertex = 0,  secondVertex = 3},
+                new Neighbour() {firstTriangle = 0, secondTriangle = 4, firstVertex = 0,  secondVertex = 1},
+                new Neighbour() {firstTriangle = 0, secondTriangle = 10, firstVertex = 0,  secondVertex = 2},
+
+                new Neighbour() {firstTriangle = 1, secondTriangle = 6, firstVertex = 2,  secondVertex = 3},
+                new Neighbour() {firstTriangle = 1, secondTriangle = 8, firstVertex = 1,  secondVertex = 3},
+
+                new Neighbour() {firstTriangle = 8, secondTriangle = 9, firstVertex = 5,  secondVertex = 3},
+                new Neighbour() {firstTriangle = 8, secondTriangle = 5, firstVertex = 5,  secondVertex = 1},
+
+                new Neighbour() {firstTriangle = 9, secondTriangle = 3, firstVertex = 5,  secondVertex = 7},
+                new Neighbour() {firstTriangle = 9, secondTriangle = 7, firstVertex = 7,  secondVertex = 3},
+
+                new Neighbour() {firstTriangle = 9, secondTriangle = 3, firstVertex = 5,  secondVertex = 7},
+                new Neighbour() {firstTriangle = 9, secondTriangle = 7, firstVertex = 7,  secondVertex = 3},
+
+                new Neighbour() {firstTriangle = 5, secondTriangle = 4, firstVertex = 0,  secondVertex = 5},
+                new Neighbour() {firstTriangle = 5, secondTriangle = 2, firstVertex = 4,  secondVertex = 5},
+
+                new Neighbour() {firstTriangle = 4, secondTriangle = 10, firstVertex = 0,  secondVertex = 4},
+            };
+            Triangle[] triangles = new Triangle[12];
+            for(uint i = 0; i < triangles.Length; i++)
+            {
+                triangles[i] = new Triangle() {firstVertex = i*3, secondVertex = i * 3 + 1, thirdVertex = i * 3 + 2 };
+            };
+            uint[] indices = new uint[normalized.Length];
+            for (uint i = 0; i < indices.Length; i++)
+                indices[i] = i;
+
+            Mesh m = new Mesh(vertices, normalized, indices, neighhours, triangles);
+            m.surfaceColor = surfaceColor;
+            m.materialDiffuseSpecularColor = surfaceColor.Xyz;
+            return m;
+        }
+
         public Mesh GetRectangleMesh(float width, float height, Vector4 surfaceColor)
         {
             Vector3[] vertices = new Vector3[]
@@ -66,11 +244,11 @@ namespace robot
             Normalized[] normalized = new Normalized[4];
             for (int i = 0; i < 4; i++)
                 normalized[i] = new Normalized() {normal = faceNormal, vertex = vertices[i]};
-            uint[] indices = new uint[]
+            uint[] indices;
+            indices = new uint[]
             {
-                0, 1, 2, 2, 1, 3
+                0, 2, 1, 1, 2, 3
             };
-
             Mesh m = new Mesh(vertices, normalized, indices, null);
             return m;
         }

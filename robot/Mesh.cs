@@ -30,13 +30,11 @@ namespace robot
     {
         public Vector3 first;
         public Vector3 second;
-        public uint triangleInd;
 
-        public Edge(Vector3 f, Vector3 s, uint triangleInd)
+        public Edge(Vector3 f, Vector3 s)
         {
             first = f;
             second = s;
-            this.triangleInd = triangleInd;
         }
     }
 
