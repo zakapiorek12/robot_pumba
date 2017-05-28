@@ -74,7 +74,7 @@ namespace robot
 
         public void CreateProjectionMatrix(int viewportWidth, int viewportHeight)
         {
-            float far = (float)20f;
+            float far = (float)100f;
             float near = (float)0.1f;
             float fov = (float)(90f / 180f * Math.PI);
             float e = (float)(1f / Math.Tan(fov / 2f));
@@ -141,7 +141,7 @@ namespace robot
             AddMeshToDraw(cylinder, MyShaderType.PHONG_LIGHT);
 
             cube = meshLoader.GetCubeMesh(1.0f, new Vector4(1, 0, 0, 1));
-            cube.ModelMatrix = Matrix4.CreateTranslation(2.0f, 0, 0);
+            cube.ModelMatrix = Matrix4.CreateTranslation(2.0f, 1.0f, 0);
             GLRenderer.AddMeshToDraw(cube, MyShaderType.PHONG_LIGHT);
         }
 
@@ -226,8 +226,8 @@ namespace robot
             BindLightDataToShaders(activeShader);
             
             Stencil(activeShader, robotReflection, PrimitiveType.Triangles);
-            RenderWithShadows(robot.meshes, activeShader, false);
-            //RenderShadows(new Mesh[] {cube}, activeShader, true); //nie moga byc 2 na raz bo tak gowniano zrobione ze renderowana jest od nowa scena w kazdym wywolaniu RenderSahdows
+            //RenderWithShadows(robot.meshes, activeShader, false);
+            RenderWithShadows(new Mesh[] {cube}, activeShader, true); //nie moga byc 2 na raz bo tak gowniano zrobione ze renderowana jest od nowa scena w kazdym wywolaniu RenderSahdows
 
             GL.Flush();
         }
@@ -243,6 +243,7 @@ namespace robot
 
         private void RenderWithShadows(Mesh[] meshesToCreateShadowFrom, ShaderProgram shader, bool detectContourEdgesBruteForce)
         {
+            float extrusion = 50f;
             int shadowFacesInd = 0;
             int contourEdgeInd = 0;
             HashSet<Edge> hashsetEdges = new HashSet<Edge>();
@@ -258,7 +259,7 @@ namespace robot
                                                    m.NormalizedVertexBuffer[firstTri.secondVertex].vertex +
                                                    m.NormalizedVertexBuffer[firstTri.thirdVertex].vertex)/3.0f;
                         triangleCenter1 = (new Vector4(triangleCenter1, 1)*m.ModelMatrix).Xyz;
-                        Vector3 lightDir1 = triangleCenter1 - lightPosition;
+                        Vector3 lightDir1 = (triangleCenter1 - lightPosition).Normalized();
                         Vector3 triangleNormal1 = m.NormalizedVertexBuffer[firstTri.firstVertex].normal;
                         triangleNormal1 = (new Vector4(triangleNormal1, 0)*m.ModelMatrix).Xyz;
 
@@ -267,7 +268,7 @@ namespace robot
                                                    m.NormalizedVertexBuffer[secTri.secondVertex].vertex +
                                                    m.NormalizedVertexBuffer[secTri.thirdVertex].vertex)/3.0f;
                         triangleCenter2 = (new Vector4(triangleCenter2, 1)*m.ModelMatrix).Xyz;
-                        Vector3 lightDir2 = triangleCenter2 - lightPosition;
+                        Vector3 lightDir2 = (triangleCenter2 - lightPosition).Normalized();
                         Vector3 triangleNormal2 = m.NormalizedVertexBuffer[secTri.firstVertex].normal;
                         triangleNormal2 = (new Vector4(triangleNormal2, 0)*m.ModelMatrix).Xyz;
 
@@ -298,7 +299,7 @@ namespace robot
                                                    m.NormalizedVertexBuffer[i - 1].vertex +
                                                    m.NormalizedVertexBuffer[i].vertex)/3.0f;
                         triangleCenter1 = (new Vector4(triangleCenter1, 1)*m.ModelMatrix).Xyz;
-                        Vector3 lightDir1 = triangleCenter1 - lightPosition;
+                        Vector3 lightDir1 = (triangleCenter1 - lightPosition).Normalized();
                         Vector3 triangleNormal1 = m.NormalizedVertexBuffer[i].normal;
                         triangleNormal1 = (new Vector4(triangleNormal1, 0)*m.ModelMatrix).Xyz;
 
@@ -334,15 +335,14 @@ namespace robot
                         contourEdgeInd++;
                     }
                 }
-
-                float extrusion = 1000f;
+                
                 for(int i = 0; i < contourEdgeInd; i++)
                 {
                     Edge e = contourEdges[i];
                     Vector3 vert1 = e.first;
                     Vector3 vert2 = e.second;
-                    Vector3 vert3 = e.first + extrusion * (e.first - lightPosition);
-                    Vector3 vert4 = e.second + extrusion * (e.second - lightPosition);
+                    Vector3 vert3 = e.first + extrusion * (e.first - lightPosition).Normalized();
+                    Vector3 vert4 = e.second + extrusion * (e.second - lightPosition).Normalized();
 
                     AddNewShadowFace(ref shadowFacesInd, vert1, vert2, vert3, vert4);
                 }
@@ -363,8 +363,6 @@ namespace robot
             //mat = Matrix4.CreateRotationY((float)(-Math.PI / 2.0f)) * Matrix4.CreateTranslation(-0.5f, 0, -0.5f);
             //AddNewShadowFace(ref shadowFacesInd, (v1 * mat).Xyz, (v2 * mat).Xyz, (v3 * mat).Xyz, (v4 * mat).Xyz);
 
-
-
             //renderowanie cieni
             GL.DepthMask(true);
             GL.ColorMask(true, true, true, true);
@@ -381,15 +379,40 @@ namespace robot
             GL.DepthMask(false);
             GL.ColorMask(false, false, false, false);
             GL.StencilFunc(StencilFunction.Always, 0, ~0);
+            
             GL.CullFace(CullFaceMode.Back);
-            GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.IncrWrap);
+            GL.StencilOp(StencilOp.Keep, StencilOp.IncrWrap, StencilOp.Keep);
             for (int i = 0; i < shadowFacesInd; i++)
                 DrawMesh(shadowFaces[i], shader);
-
+            //przednie denko
+            foreach (Mesh m in meshesToCreateShadowFrom)
+            {
+                DrawMesh(m, shader);
+            }
             GL.CullFace(CullFaceMode.Front);
-            GL.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.DecrWrap);
+            GL.StencilOp(StencilOp.Keep, StencilOp.DecrWrap, StencilOp.Keep);
             for (int i = 0; i < shadowFacesInd; i++)
                 DrawMesh(shadowFaces[i], shader);
+            //tylne denko
+            foreach (Mesh m in meshesToCreateShadowFrom)
+            {
+                Matrix4 prevMat = m.ModelMatrix;
+                for (int i = 0; i < m.NormalizedVertexBuffer.Length; i++)
+                {
+                    Vector3 vert = (new Vector4(m.NormalizedVertexBuffer[i].vertex, 1) * m.ModelMatrix).Xyz;
+                    m.NormalizedVertexBuffer[i].vertex = vert + extrusion * (vert - lightPosition).Normalized();
+                }
+                m.ModelMatrix = Matrix4.Identity;
+                m.FillVbos();
+                DrawMesh(m, shader);
+                m.ModelMatrix = prevMat;
+                for (int i = 0; i < m.NormalizedVertexBuffer.Length; i++)
+                {
+                    Vector4 vert = new Vector4(m.NormalizedVertexBuffer[i].vertex - extrusion * (m.NormalizedVertexBuffer[i].vertex - lightPosition).Normalized(), 1);
+                    m.NormalizedVertexBuffer[i].vertex = (vert * m.ModelMatrix.Inverted()).Xyz;
+                }
+                m.FillVbos();
+            }
             GL.Disable(EnableCap.CullFace);
 
             GL.DepthMask(true);
